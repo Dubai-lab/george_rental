@@ -427,7 +427,7 @@ export default function Stores() {
         .from('leases')
         .select('store_id, tenant:profiles(full_name)')
         .eq('status', 'active')
-      return (data ?? []) as { store_id: string; tenant: { full_name: string } | null }[]
+      return (data ?? []) as unknown as { store_id: string; tenant: { full_name: string } | null }[]
     },
     staleTime: 60_000,
   })

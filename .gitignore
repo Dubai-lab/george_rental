@@ -1,0 +1,39 @@
+# Dependencies
+node_modules
+
+# Build
+dist
+dist-ssr
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Sensitive / private files — never commit these
+Design/
+supabase/
+supabase-info.md
+supabase-patches.sql
+supabase-schema.sql
+Problems_with_Past_Projects_Claude_Build_me.md
+.claude/
+supabase/.temp/
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

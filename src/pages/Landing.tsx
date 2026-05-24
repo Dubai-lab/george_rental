@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import GRLogo from '@/components/ui/GRLogo'
 import { IconArrow, IconLock } from '@/components/ui/Icons'
 import { useWindowWidth } from '@/hooks/useWindowWidth'
@@ -14,6 +15,7 @@ const STATS = [
 export default function Landing() {
   const w = useWindowWidth()
   const isMobile = w < 640
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
     <div style={{
@@ -32,41 +34,110 @@ export default function Landing() {
       <div className="gr-noise" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
 
       {/* ── Nav ── */}
-      <header style={{
-        position: 'relative', zIndex: 5, height: 68,
-        padding: isMobile ? '0 20px' : '0 64px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <GRLogo size={20} />
-        {!isMobile && (
-          <nav style={{ display: 'flex', gap: 36, fontSize: 14, color: 'rgba(246,241,228,0.78)' }}>
-            <Link to="/stores" style={navLink}>Stores</Link>
-            <Link to="/sign-in" style={navLink}>Pay rent</Link>
-            <a href="#help" style={navLink}>Help</a>
-            <a href="#contact" style={navLink}>Contact</a>
-          </nav>
-        )}
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+      <header style={{ position: 'relative', zIndex: 10 }}>
+        <div style={{
+          height: 68, padding: isMobile ? '0 20px' : '0 64px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <GRLogo size={20} />
+
+          {/* Desktop nav */}
           {!isMobile && (
+            <nav style={{ display: 'flex', gap: 36, fontSize: 14, color: 'rgba(246,241,228,0.78)' }}>
+              <Link to="/stores" style={navLink}>Stores</Link>
+              <Link to="/sign-in" style={navLink}>Pay rent</Link>
+              <a href="#help" style={navLink}>Help</a>
+              <a href="#contact" style={navLink}>Contact</a>
+            </nav>
+          )}
+
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            {!isMobile && (
+              <Link to="/sign-in" style={{
+                height: 38, padding: '0 16px', background: 'transparent',
+                color: 'rgba(246,241,228,0.85)', border: '1px solid rgba(246,241,228,0.18)',
+                borderRadius: 8, fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center',
+                textDecoration: 'none',
+              }}>
+                Owner sign in
+              </Link>
+            )}
             <Link to="/sign-in" style={{
-              height: 38, padding: '0 16px', background: 'transparent',
-              color: 'rgba(246,241,228,0.85)', border: '1px solid rgba(246,241,228,0.18)',
-              borderRadius: 8, fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center',
+              height: 38, padding: '0 18px', background: 'var(--gr-crimson)', color: '#fff',
+              border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center',
+              boxShadow: '0 8px 24px rgba(209,31,44,0.35)',
               textDecoration: 'none',
             }}>
-              Owner sign in
+              Pay my rent →
             </Link>
-          )}
-          <Link to="/sign-in" style={{
-            height: 38, padding: '0 18px', background: 'var(--gr-crimson)', color: '#fff',
-            border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            display: 'inline-flex', alignItems: 'center',
-            boxShadow: '0 8px 24px rgba(209,31,44,0.35)',
-            textDecoration: 'none',
-          }}>
-            Pay my rent →
-          </Link>
+
+            {/* Hamburger (mobile only) */}
+            {isMobile && (
+              <button
+                type="button"
+                onClick={() => setMenuOpen(v => !v)}
+                style={{
+                  background: 'rgba(246,241,228,0.08)', border: '1px solid rgba(246,241,228,0.15)',
+                  borderRadius: 8, width: 38, height: 38, cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
+                }}
+              >
+                <span style={{ display: 'block', width: 18, height: 2, background: 'var(--gr-cream)', borderRadius: 2, transition: 'all 0.2s', transform: menuOpen ? 'rotate(45deg) translate(5px,5px)' : 'none' }} />
+                <span style={{ display: 'block', width: 18, height: 2, background: 'var(--gr-cream)', borderRadius: 2, transition: 'all 0.2s', opacity: menuOpen ? 0 : 1 }} />
+                <span style={{ display: 'block', width: 18, height: 2, background: 'var(--gr-cream)', borderRadius: 2, transition: 'all 0.2s', transform: menuOpen ? 'rotate(-45deg) translate(5px,-5px)' : 'none' }} />
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Mobile dropdown menu */}
+        <AnimatePresence>
+          {isMobile && menuOpen && (
+            <motion.div
+              key="mobile-menu"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.18 }}
+              style={{
+                position: 'absolute', top: '100%', left: 0, right: 0,
+                background: 'rgba(6,9,20,0.97)', backdropFilter: 'blur(12px)',
+                borderBottom: '1px solid rgba(246,241,228,0.1)',
+                padding: '8px 20px 20px',
+                display: 'flex', flexDirection: 'column', gap: 2,
+              }}
+            >
+              {[
+                { label: 'Stores',        to: '/stores' },
+                { label: 'Pay rent',      to: '/sign-in' },
+                { label: 'Help',          href: '#help' },
+                { label: 'Contact',       href: '#contact' },
+                { label: 'Owner sign in', to: '/sign-in' },
+              ].map(item => (
+                item.href ? (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    style={mobileNavLink}
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={item.label}
+                    to={item.to!}
+                    onClick={() => setMenuOpen(false)}
+                    style={mobileNavLink}
+                  >
+                    {item.label}
+                  </Link>
+                )
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* ── Hero ── */}
@@ -353,6 +424,12 @@ export default function Landing() {
 const navLink: React.CSSProperties = {
   color: 'rgba(246,241,228,0.78)', textDecoration: 'none', fontSize: 14,
   transition: 'color 0.15s', cursor: 'pointer',
+}
+
+const mobileNavLink: React.CSSProperties = {
+  display: 'block', padding: '14px 4px',
+  color: 'rgba(246,241,228,0.85)', textDecoration: 'none', fontSize: 16, fontWeight: 500,
+  borderBottom: '1px solid rgba(246,241,228,0.07)',
 }
 
 // ─── Mini card components ─────────────────────────────────────

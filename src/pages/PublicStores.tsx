@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Store, Area } from '@/types'
@@ -33,6 +33,7 @@ export default function PublicStores() {
   const { data: stores = [], isLoading } = usePublicStores()
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState<FilterStatus>('all')
+  const [menuOpen, setMenuOpen] = useState(false)
   const w = useWindowWidth()
   const isMobile = w < 640
 
@@ -53,29 +54,86 @@ export default function PublicStores() {
     <div style={{ minHeight: '100vh', background: 'var(--gr-paper)', fontFamily: 'var(--f-body)' }}>
       {/* Nav */}
       <header style={{
-        background: 'var(--gr-midnight)', padding: isMobile ? '0 20px' : '0 48px', height: 68,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: 'var(--gr-midnight)',
         position: 'sticky', top: 0, zIndex: 50,
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
-        <Link to="/" style={{ textDecoration: 'none' }}>
-          <GRLogo size={20} />
-        </Link>
-        <nav style={{ display: 'flex', gap: isMobile ? 14 : 28, alignItems: 'center' }}>
-          {!isMobile && (
-            <>
-              <Link to="/" style={{ fontSize: 13, color: 'rgba(246,241,228,0.65)', textDecoration: 'none' }}>Home</Link>
-              <Link to="/stores" style={{ fontSize: 13, color: 'var(--gr-cream)', fontWeight: 600, textDecoration: 'none' }}>Stores</Link>
-            </>
-          )}
-          <Link to="/sign-in" style={{
-            height: 34, padding: '0 16px', background: 'var(--gr-crimson)', color: '#fff',
-            borderRadius: 8, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center',
-            textDecoration: 'none', gap: 6,
-          }}>
-            Sign in <IconArrow size={13} stroke="#fff" />
+        <div style={{
+          padding: isMobile ? '0 20px' : '0 48px', height: 68,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <Link to="/" style={{ textDecoration: 'none' }}>
+            <GRLogo size={20} />
           </Link>
-        </nav>
+          <nav style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            {!isMobile && (
+              <>
+                <Link to="/" style={{ fontSize: 13, color: 'rgba(246,241,228,0.65)', textDecoration: 'none' }}>Home</Link>
+                <Link to="/stores" style={{ fontSize: 13, color: 'var(--gr-cream)', fontWeight: 600, textDecoration: 'none' }}>Stores</Link>
+              </>
+            )}
+            <Link to="/sign-in" style={{
+              height: 34, padding: '0 16px', background: 'var(--gr-crimson)', color: '#fff',
+              borderRadius: 8, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center',
+              textDecoration: 'none', gap: 6,
+            }}>
+              Sign in <IconArrow size={13} stroke="#fff" />
+            </Link>
+            {isMobile && (
+              <button
+                type="button"
+                onClick={() => setMenuOpen(v => !v)}
+                style={{
+                  background: 'rgba(246,241,228,0.08)', border: '1px solid rgba(246,241,228,0.15)',
+                  borderRadius: 8, width: 36, height: 36, cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
+                }}
+              >
+                <span style={{ display: 'block', width: 16, height: 2, background: 'var(--gr-cream)', borderRadius: 2, transition: 'all 0.2s', transform: menuOpen ? 'rotate(45deg) translate(4px,4px)' : 'none' }} />
+                <span style={{ display: 'block', width: 16, height: 2, background: 'var(--gr-cream)', borderRadius: 2, transition: 'all 0.2s', opacity: menuOpen ? 0 : 1 }} />
+                <span style={{ display: 'block', width: 16, height: 2, background: 'var(--gr-cream)', borderRadius: 2, transition: 'all 0.2s', transform: menuOpen ? 'rotate(-45deg) translate(4px,-4px)' : 'none' }} />
+              </button>
+            )}
+          </nav>
+        </div>
+
+        {/* Mobile dropdown */}
+        <AnimatePresence>
+          {isMobile && menuOpen && (
+            <motion.div
+              key="stores-menu"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.16 }}
+              style={{
+                background: 'rgba(6,9,20,0.97)', backdropFilter: 'blur(12px)',
+                borderBottom: '1px solid rgba(246,241,228,0.08)',
+                padding: '8px 20px 16px',
+                display: 'flex', flexDirection: 'column', gap: 0,
+              }}
+            >
+              {[
+                { label: 'Home',    to: '/' },
+                { label: 'Stores',  to: '/stores' },
+                { label: 'Sign in', to: '/sign-in' },
+              ].map(item => (
+                <Link
+                  key={item.label}
+                  to={item.to}
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    display: 'block', padding: '13px 4px',
+                    color: 'rgba(246,241,228,0.85)', textDecoration: 'none', fontSize: 16, fontWeight: 500,
+                    borderBottom: '1px solid rgba(246,241,228,0.07)',
+                  }}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* Hero strip */}

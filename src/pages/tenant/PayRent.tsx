@@ -18,7 +18,21 @@ type FormValues = {
   notes: string
 }
 
-type Method = 'mtn_momo' | 'bank_transfer' | 'cash'
+type Method = 'mtn_momo' | 'bank_transfer'
+
+interface BankAccount { bank: string; account: string; name: string }
+interface PaySettings { momo_number: string; momo_name: string; banks: BankAccount[] }
+
+function usePaySettings() {
+  return useQuery<PaySettings | null>({
+    queryKey: ['payment-settings'],
+    queryFn: async () => {
+      const { data } = await supabase.from('payment_settings').select('momo_number,momo_name,banks').maybeSingle()
+      return data as PaySettings | null
+    },
+    staleTime: 300_000,
+  })
+}
 
 function useTenantLease(userId: string | undefined) {
   return useQuery<TenantLease | null>({
@@ -47,6 +61,11 @@ export default function PayRent() {
   const { data: fxRate = 180 } = useFxRate()
   const toLrd = (usd: number) => toLrdFn(usd, fxRate)
   const { data: lease } = useTenantLease(profile?.id)
+  const { data: paySettings } = usePaySettings()
+
+  const momoNumber = paySettings?.momo_number ?? '088 605 5575'
+  const momoName   = paySettings?.momo_name   ?? 'George Rental'
+  const bankList   = paySettings?.banks ?? []
 
   const [step, setStep]     = useState<1 | 2 | 3>(1)
   const [method, setMethod] = useState<Method>('mtn_momo')
@@ -93,10 +112,8 @@ export default function PayRent() {
     onSuccess: () => setDone(true),
   })
 
-  const mtmNumber = '088 605 5575'
-
   function copyMtn() {
-    navigator.clipboard.writeText(mtmNumber)
+    navigator.clipboard.writeText(momoNumber)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -183,7 +200,6 @@ export default function PayRent() {
               {([
                 { id: 'mtn_momo', label: 'MTN Mobile Money', sub: 'Instant — most popular', badge: 'MTN', badgeColor: '#FFC107' },
                 { id: 'bank_transfer', label: 'Bank Transfer', sub: 'LBDI · Ecobank · UBA', badge: 'BANK', badgeColor: 'var(--gr-navy)' },
-                { id: 'cash', label: 'Cash', sub: 'Pay in person, bring receipt', badge: '💵', badgeColor: 'var(--gr-mint)' },
               ] as { id: Method; label: string; sub: string; badge: string; badgeColor: string }[]).map(m => (
                 <label key={m.id} style={{
                   display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
@@ -228,10 +244,10 @@ export default function PayRent() {
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 10 }}>Send to MTN MoMo</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <div style={{ fontSize: 11, color: 'var(--gr-stone-2)' }}>George Rental Account</div>
-                    <div style={{ fontFamily: 'var(--f-mono)', fontSize: 18, fontWeight: 700, color: 'var(--gr-ink)', marginTop: 4 }}>{mtmNumber}</div>
+                    <div style={{ fontSize: 11, color: 'var(--gr-stone-2)' }}>{momoName}</div>
+                    <div style={{ fontFamily: 'var(--f-mono)', fontSize: 18, fontWeight: 700, color: 'var(--gr-ink)', marginTop: 4 }}>{momoNumber}</div>
                   </div>
-                  <button onClick={copyMtn} style={{
+                  <button type="button" onClick={copyMtn} style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
                     borderRadius: 8, border: '1px solid rgba(255,193,7,0.4)', background: 'none',
                     cursor: 'pointer', fontSize: 12, color: copied ? 'var(--gr-mint)' : 'var(--gr-ink)', fontWeight: 500,
@@ -253,15 +269,11 @@ export default function PayRent() {
                 borderRadius: 14, padding: '16px 18px', marginBottom: 20,
               }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 12 }}>Bank Account Details</div>
-                {[
-                  { bank: 'LBDI', acc: '0012 3456 789', name: 'George Rental Ltd' },
-                  { bank: 'Ecobank', acc: '2025 0000 1234', name: 'George Rental Ltd' },
-                  { bank: 'UBA', acc: '0067 8901 2345', name: 'George Rental Ltd' },
-                ].map(b => (
+                {bankList.map(b => (
                   <div key={b.bank} style={{ marginBottom: 8 }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gr-navy)' }}>{b.bank}</span>
-                    <span style={{ fontFamily: 'var(--f-mono)', fontSize: 12, color: 'var(--gr-ink)', marginLeft: 10 }}>{b.acc}</span>
-                    <span style={{ fontSize: 11, color: 'var(--gr-stone-2)', marginLeft: 6 }}>· {b.name}</span>
+                    <span style={{ fontFamily: 'var(--f-mono)', fontSize: 12, color: 'var(--gr-ink)', marginLeft: 10 }}>{b.account}</span>
+                    {b.name && <span style={{ fontSize: 11, color: 'var(--gr-stone-2)', marginLeft: 6 }}>· {b.name}</span>}
                   </div>
                 ))}
               </div>
@@ -277,16 +289,14 @@ export default function PayRent() {
               </div>
 
               {/* Ref */}
-              {method !== 'cash' && (
-                <div>
-                  <label style={labelStyle}>{method === 'mtn_momo' ? 'MTN Transaction ID' : 'Bank Reference'}</label>
-                  <input
-                    placeholder={method === 'mtn_momo' ? 'e.g. 1234567890' : 'e.g. TRF2025XXXX'}
-                    {...register('transaction_ref')}
-                    style={inputStyle}
-                  />
-                </div>
-              )}
+              <div>
+                <label style={labelStyle}>{method === 'mtn_momo' ? 'MTN Transaction ID' : 'Bank Reference'}</label>
+                <input
+                  placeholder={method === 'mtn_momo' ? 'e.g. 1234567890' : 'e.g. TRF2025XXXX'}
+                  {...register('transaction_ref')}
+                  style={inputStyle}
+                />
+              </div>
 
               {/* Proof upload */}
               <div>
@@ -327,7 +337,7 @@ export default function PayRent() {
               {[
                 { label: 'Amount (USD)', value: `$${amountUsd.toLocaleString()}` },
                 { label: 'Amount (LRD)', value: `L$${amountLrd.toLocaleString()}` },
-                { label: 'Method', value: method === 'mtn_momo' ? 'MTN Mobile Money' : method === 'bank_transfer' ? 'Bank Transfer' : 'Cash' },
+                { label: 'Method', value: method === 'mtn_momo' ? 'MTN Mobile Money' : 'Bank Transfer' },
                 { label: 'Proof', value: proofFile ? proofFile.name : 'None uploaded' },
               ].map(r => (
                 <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between' }}>

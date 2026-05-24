@@ -20,6 +20,7 @@ const NAV = [
   { path: '/owner/enquiries',   label: 'Enquiries',    Icon: IconMail,   badge: 'enquiries',   dot: true },
   { path: '/owner/reports',     label: 'Reports',      Icon: IconChart   },
   { path: '/owner/map',         label: 'Map view',     Icon: IconMap     },
+  { path: '/owner/settings',    label: 'Settings',     Icon: IconSettings },
 ]
 
 interface AppSidebarProps {

@@ -16,6 +16,7 @@ const TITLES: Record<string, string> = {
   '/owner/enquiries':   'Enquiries',
   '/owner/reports':     'Reports',
   '/owner/map':         'Map view',
+  '/owner/settings':    'Settings',
 }
 
 const SUBTITLES: Record<string, string> = {

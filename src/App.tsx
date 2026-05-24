@@ -21,6 +21,7 @@ const Reports     = lazy(() => import('@/pages/owner/Reports'))
 const Maintenance = lazy(() => import('@/pages/owner/Maintenance'))
 const MapView     = lazy(() => import('@/pages/owner/Map'))
 const Enquiries   = lazy(() => import('@/pages/owner/Enquiries'))
+const Settings    = lazy(() => import('@/pages/owner/Settings'))
 
 const TenantHome        = lazy(() => import('@/pages/tenant/TenantHome'))
 const PayRent           = lazy(() => import('@/pages/tenant/PayRent'))
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="/owner/maintenance" element={<Maintenance />} />
           <Route path="/owner/map"         element={<MapView />} />
           <Route path="/owner/enquiries"   element={<Enquiries />} />
+          <Route path="/owner/settings"    element={<Settings />} />
         </Route>
 
         {/* Tenant */}

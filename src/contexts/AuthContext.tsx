@@ -34,71 +34,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true
 
-    // ── Initial session check ──────────────────────────────────────
-    // getSession() reads from localStorage (fast). If the token is
-    // expired it will attempt a network refresh — we race it against
-    // a 7-second timeout so the spinner ALWAYS clears.
-    async function init() {
-      try {
-        const sessionResult = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise<null>(res => setTimeout(() => res(null), 7000)),
-        ])
-
-        if (!mounted) return
-        const session = sessionResult?.data?.session ?? null
-        setUser(session?.user ?? null)
-
-        if (session?.user) {
-          // Profile fetch also gets a timeout so it never blocks forever
-          const p = await Promise.race([
-            fetchProfile(session.user.id),
-            new Promise<null>(res => setTimeout(() => res(null), 5000)),
-          ])
-          if (!mounted) return
-          setProfile(p)
-        }
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    }
-
-    init()
-
-    // ── Subsequent auth events (sign-in, sign-out, token refresh) ──
-    // We skip INITIAL_SESSION because init() above already handled it.
-    // Skipping it prevents a double profile-fetch race on startup.
+    // onAuthStateChange is the single source of truth for session state.
+    // INITIAL_SESSION fires on every page load — it restores the session from
+    // localStorage (or confirms there is none). This is the correct Supabase v2
+    // pattern and replaces the old getSession() + timeout approach that was
+    // causing users to be logged out on refresh.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'INITIAL_SESSION') return
         if (!mounted) return
+
+        // SIGNED_IN is handled directly inside signIn() — skip it here to
+        // avoid a duplicate profile fetch racing with the one in signIn().
+        if (event === 'SIGNED_IN') return
 
         if (session?.user) {
           setUser(session.user)
-          const p = await fetchProfile(session.user.id)
+          const p = await Promise.race([
+            fetchProfile(session.user.id),
+            new Promise<null>(res => setTimeout(() => res(null), 8000)),
+          ])
           if (!mounted) return
-          // Only overwrite profile if fetch succeeded — don't null-out a
-          // valid session just because a background refresh fetch failed.
           if (p !== null) setProfile(p)
         } else {
-          // Genuine sign-out — clear everything
           setUser(null)
           setProfile(null)
+        }
+
+        // Clear the initial loading spinner once the persisted session is known
+        if (event === 'INITIAL_SESSION' && mounted) {
+          setLoading(false)
         }
       }
     )
 
+    // Safety net: if INITIAL_SESSION never fires (e.g. network completely down),
+    // clear the loading screen after 12 seconds so the user isn't stuck forever.
+    const safetyTimeout = setTimeout(() => {
+      if (mounted) setLoading(false)
+    }, 12000)
+
     return () => {
       mounted = false
       subscription.unsubscribe()
+      clearTimeout(safetyTimeout)
     }
   }, [])
 
   async function signIn(email: string, password: string): Promise<'owner' | 'tenant'> {
+    // Sign out first to clear any stale/conflicting session in localStorage.
+    // Without this, a leftover expired session can cause the subsequent
+    // profile fetch to hang indefinitely.
+    await supabase.auth.signOut()
+
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
 
-    // Race profile fetch against 8s timeout so the button never spins forever
     const p = await Promise.race([
       fetchProfile(data.user.id),
       new Promise<null>(res => setTimeout(() => res(null), 8000)),
@@ -108,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut()
       throw new Error('Could not load your account. Please try again.')
     }
+
     setUser(data.user)
     setProfile(p)
     return p.role

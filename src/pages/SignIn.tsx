@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
@@ -10,25 +10,18 @@ import { IconEye, IconEyeOff, IconLock } from '@/components/ui/Icons'
 type FormValues = { email: string; password: string }
 
 export default function SignIn() {
-  const { signIn, user, profile, loading } = useAuth()
+  const { signIn } = useAuth()
   const navigate = useNavigate()
   const [showPw, setShowPw]   = useState(false)
   const [authErr, setAuthErr] = useState<string | null>(null)
 
   const { register, handleSubmit, formState: { isSubmitting, errors } } = useForm<FormValues>()
 
-  // Navigate once we have both user AND profile (profile fetch is async after sign-in)
-  useEffect(() => {
-    if (!loading && user && profile) {
-      navigate(profile.role === 'owner' ? '/owner/dashboard' : '/tenant', { replace: true })
-    }
-  }, [user, profile, loading])
-
   async function onSubmit({ email, password }: FormValues) {
     setAuthErr(null)
     try {
-      await signIn(email, password)
-      // onAuthStateChange will set profile → the effect above will navigate
+      const role = await signIn(email, password)
+      navigate(role === 'owner' ? '/owner/dashboard' : '/tenant', { replace: true })
     } catch (e: any) {
       setAuthErr(e.message ?? 'Sign in failed. Check your email and password.')
     }
@@ -47,7 +40,7 @@ export default function SignIn() {
         background: 'radial-gradient(circle, rgba(209,31,44,0.35) 0%, transparent 60%)',
         filter: 'blur(20px)', pointerEvents: 'none',
       }} />
-      <div className="gr-grid-bg" style={{ position: 'absolute', inset: 0, opacity: 0.35 }} />
+      <div className="gr-grid-bg" style={{ position: 'absolute', inset: 0, opacity: 0.35, pointerEvents: 'none' }} />
 
       <motion.div
         initial={{ opacity: 0, y: 24 }}

@@ -7,7 +7,7 @@ interface AuthContextType {
   user:    User | null
   profile: Profile | null
   loading: boolean
-  signIn:  (email: string, password: string) => Promise<void>
+  signIn:  (email: string, password: string) => Promise<'owner' | 'tenant'>
   signOut: () => Promise<void>
 }
 
@@ -94,9 +94,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+  async function signIn(email: string, password: string): Promise<'owner' | 'tenant'> {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+
+    // Fetch profile immediately — don't wait for onAuthStateChange chain
+    const p = await fetchProfile(data.user.id)
+    if (!p) throw new Error('Account not set up yet. Contact the property manager.')
+    setUser(data.user)
+    setProfile(p)
+    return p.role
   }
 
   async function signOut() {

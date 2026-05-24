@@ -63,8 +63,16 @@ export default function Agreement() {
           .no-print { display: none !important; }
           body { margin: 0; }
           .page { box-shadow: none !important; margin: 0 !important; padding: 40px 48px !important; max-width: 100% !important; }
+          .watermark { display: block !important; }
         }
-        @page { margin: 1.5cm; size: A4; }
+        @page {
+          size: A4;
+          margin: 1.5cm;
+          @bottom-left { content: ''; }
+          @bottom-right { content: ''; }
+          @top-left { content: ''; }
+          @top-right { content: ''; }
+        }
         body { font-family: Georgia, 'Times New Roman', serif; background: #f4f4f4; }
       `}</style>
 
@@ -86,6 +94,21 @@ export default function Agreement() {
         >
           🖨 Print / Save as PDF
         </button>
+      </div>
+
+      {/* Watermark — fixed so it repeats on every printed page */}
+      <div className="watermark" style={{
+        position: 'fixed', top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%) rotate(-45deg)',
+        pointerEvents: 'none', zIndex: 0, textAlign: 'center',
+        lineHeight: 1.15, userSelect: 'none',
+      }}>
+        <div style={{ fontSize: 68, fontWeight: 900, color: 'rgba(6,9,20,0.045)', fontFamily: 'Georgia, serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          George Rental
+        </div>
+        <div style={{ fontSize: 28, fontWeight: 700, color: 'rgba(6,9,20,0.04)', fontFamily: 'Georgia, serif', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+          Agreement
+        </div>
       </div>
 
       {/* Agreement document */}
@@ -223,8 +246,7 @@ export default function Agreement() {
         {/* Footer */}
         <div style={{ marginTop: 48, paddingTop: 18, borderTop: '1px solid #ccc', fontSize: 11, color: '#888', textAlign: 'center', lineHeight: 1.6 }}>
           Both parties should retain a signed hard copy of this agreement.<br />
-          A scanned copy may be uploaded to the George Rental management system for digital record-keeping.<br />
-          Lease Code: <strong style={{ fontFamily: 'monospace' }}>{lease.lease_code ?? '—'}</strong> &nbsp;·&nbsp; Generated: {today}
+          Lease Code: <strong style={{ fontFamily: 'monospace' }}>{lease.lease_code ?? '—'}</strong> &nbsp;·&nbsp; Date: {today}
         </div>
       </div>
     </>

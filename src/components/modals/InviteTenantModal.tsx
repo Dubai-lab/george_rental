@@ -46,19 +46,18 @@ export default function InviteTenantModal({ onClose, onSuccess }: Props) {
     const store = stores.find(s => s.id === values.store_id)
     if (!store) { setError('Please select a store.'); return }
 
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email: values.email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/accept-invite`,
-        data: {
-          role:          'tenant',
-          full_name:     values.full_name,
-          store_id:      values.store_id,
-          business_name: values.business_name,
-          business_type: values.business_type,
-          start_date:    values.start_date,
-          rent_usd:      store.rent_usd,
-        },
+    const { error: err } = await supabase.functions.invoke('send-tenant-invite', {
+      body: {
+        email:         values.email,
+        full_name:     values.full_name,
+        store_id:      values.store_id,
+        store_name:    store.name,
+        store_code:    store.code,
+        store_area:    store.area?.name ?? '',
+        rent_usd:      store.rent_usd,
+        business_name: values.business_name,
+        business_type: values.business_type,
+        start_date:    values.start_date,
       },
     })
 

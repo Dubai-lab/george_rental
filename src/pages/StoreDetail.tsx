@@ -403,7 +403,7 @@ export default function StoreDetail() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Contact card */}
               <div style={{ background: '#fff', border: '1px solid var(--gr-line)', borderRadius: 16, padding: '24px' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 11 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   Contact us directly
                 </div>
 

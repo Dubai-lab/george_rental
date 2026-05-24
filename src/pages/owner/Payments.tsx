@@ -57,6 +57,22 @@ export default function Payments() {
   const [q, setQ] = useState('')
   const [selected, setSelected] = useState<PaymentRow | null>(null)
   const [notes, setNotes] = useState('')
+  const [resending, setResending] = useState(false)
+  const [resent, setResent] = useState(false)
+
+  async function resendReceipt(p: PaymentRow) {
+    setResending(true)
+    setResent(false)
+    try {
+      await supabase.functions.invoke('notify-payment', {
+        body: { payment_id: p.id, action: p.status as 'confirmed' | 'rejected' },
+      })
+      setResent(true)
+      setTimeout(() => setResent(false), 3000)
+    } finally {
+      setResending(false)
+    }
+  }
 
   const { data: payments = [], isLoading } = usePayments(filter)
 
@@ -269,6 +285,29 @@ export default function Payments() {
                       View uploaded proof
                       <IconDownload size={14} style={{ marginLeft: 'auto', color: 'var(--gr-stone-2)' }} />
                     </a>
+                  </div>
+                )}
+
+                {/* Resend receipt email */}
+                {(selected.status === 'confirmed' || selected.status === 'rejected') && (
+                  <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--gr-line)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gr-stone-2)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+                      Email Notification
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => resendReceipt(selected)}
+                      disabled={resending}
+                      style={{
+                        width: '100%', height: 42, borderRadius: 10,
+                        border: '1px solid var(--gr-line)', background: resent ? 'rgba(47,184,117,0.06)' : '#fff',
+                        color: resent ? 'var(--gr-mint)' : 'var(--gr-ink)',
+                        fontSize: 13, fontWeight: 600, cursor: resending ? 'wait' : 'pointer',
+                        opacity: resending ? 0.6 : 1, transition: 'all 0.2s',
+                      }}
+                    >
+                      {resending ? 'Sending…' : resent ? '✓ Receipt sent' : `Resend ${selected.status === 'confirmed' ? 'receipt' : 'rejection'} email to tenant`}
+                    </button>
                   </div>
                 )}
 

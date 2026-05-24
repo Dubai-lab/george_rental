@@ -103,6 +103,136 @@ function useReports() {
   })
 }
 
+function printReport(data: ReturnType<typeof useReports>['data'], fxRate: number) {
+  if (!data) return
+  const { monthlyData, totalCollected, totalExpected, collectionRate, areaData, arrears, occupiedCount, totalStores } = data
+  const occupancy = totalStores > 0 ? Math.round((occupiedCount / totalStores) * 100) : 0
+  const today = new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>George Rental — Report ${today}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Arial, sans-serif; color: #060914; padding: 32px; font-size: 13px; }
+    .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 28px; border-bottom: 2px solid #060914; padding-bottom: 16px; }
+    .logo { font-size: 20px; font-weight: 800; }
+    .logo span { color: #D11F2C; }
+    .meta { text-align:right; font-size:12px; color:#6B6560; }
+    .kpis { display:grid; grid-template-columns: repeat(4,1fr); gap:12px; margin-bottom:28px; }
+    .kpi { border:1px solid #E5E0D5; border-radius:8px; padding:14px; background:#F9F7F3; }
+    .kpi-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#9E9893; margin-bottom:6px; }
+    .kpi-value { font-size:22px; font-weight:800; color:#060914; }
+    .kpi-sub { font-size:11px; color:#6B6560; margin-top:3px; }
+    h2 { font-size:14px; font-weight:700; margin-bottom:12px; margin-top:24px; color:#060914; }
+    table { width:100%; border-collapse:collapse; margin-bottom:24px; }
+    th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#9E9893; text-align:left; padding:8px 10px; background:#F9F7F3; border-bottom:1px solid #E5E0D5; }
+    td { padding:9px 10px; border-bottom:1px solid #E5E0D5; font-size:12px; color:#060914; }
+    td.num { text-align:right; font-family:monospace; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:99px; font-size:10px; font-weight:700; }
+    .badge-red { background:rgba(209,31,44,0.1); color:#D11F2C; }
+    .badge-amber { background:rgba(233,185,73,0.15); color:#9A6F00; }
+    .footer { margin-top:32px; padding-top:16px; border-top:1px solid #E5E0D5; font-size:11px; color:#9E9893; }
+    @media print { body { padding:20px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="logo">George<span>Rental</span></div>
+      <div style="font-size:12px;color:#6B6560;margin-top:4px">Income &amp; Performance Report</div>
+    </div>
+    <div class="meta">
+      Generated: ${today}<br>
+      Broad Street, Central Monrovia, Liberia<br>
+      +231 88 605 5575
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-label">Total Collected (12m)</div>
+      <div class="kpi-value">$${totalCollected.toLocaleString()}</div>
+      <div class="kpi-sub">L$${toLrd(totalCollected, fxRate).toLocaleString()}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Total Expected (12m)</div>
+      <div class="kpi-value">$${totalExpected.toLocaleString()}</div>
+      <div class="kpi-sub">L$${toLrd(totalExpected, fxRate).toLocaleString()}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Collection Rate</div>
+      <div class="kpi-value">${collectionRate}%</div>
+      <div class="kpi-sub" style="color:${collectionRate >= 80 ? '#2FB875' : '#C85A00'}">${collectionRate >= 80 ? 'On track' : 'Needs attention'}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Occupancy</div>
+      <div class="kpi-value">${occupancy}%</div>
+      <div class="kpi-sub">${occupiedCount} / ${totalStores} stores occupied</div>
+    </div>
+  </div>
+
+  <h2>Monthly Income — Last 12 Months</h2>
+  <table>
+    <thead><tr><th>Month</th><th>Expected</th><th>Collected</th><th>Variance</th><th>Rate</th></tr></thead>
+    <tbody>
+      ${monthlyData.map(m => {
+        const rate = m.expected > 0 ? Math.round((m.collected / m.expected) * 100) : 0
+        const variance = m.collected - m.expected
+        return `<tr>
+          <td>${m.label}</td>
+          <td class="num">$${m.expected.toLocaleString()}</td>
+          <td class="num">$${m.collected.toLocaleString()}</td>
+          <td class="num" style="color:${variance >= 0 ? '#2FB875' : '#D11F2C'}">${variance >= 0 ? '+' : ''}$${variance.toLocaleString()}</td>
+          <td class="num">${rate}%</td>
+        </tr>`
+      }).join('')}
+    </tbody>
+  </table>
+
+  ${areaData.length > 0 ? `
+  <h2>Revenue by Area</h2>
+  <table>
+    <thead><tr><th>Area</th><th>Stores</th><th>Monthly Revenue</th></tr></thead>
+    <tbody>
+      ${areaData.map(a => `<tr>
+        <td>${a.area}</td>
+        <td class="num">${a.count}</td>
+        <td class="num">$${a.revenue.toLocaleString()}/mo</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>` : ''}
+
+  <h2>Arrears — Outstanding Balances</h2>
+  ${arrears.length === 0
+    ? '<p style="font-size:13px;color:#2FB875;margin-bottom:20px">✓ All tenants are up to date — no arrears.</p>'
+    : `<table>
+    <thead><tr><th>Tenant</th><th>Store</th><th>Months Overdue</th><th>Amount Owed</th></tr></thead>
+    <tbody>
+      ${arrears.map(a => `<tr>
+        <td>${a.tenant}</td>
+        <td>${a.store}</td>
+        <td class="num"><span class="badge ${a.months >= 2 ? 'badge-red' : 'badge-amber'}">${a.months} month${a.months > 1 ? 's' : ''}</span></td>
+        <td class="num" style="color:#D11F2C;font-weight:700">$${a.amount.toLocaleString()}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+  <p style="font-size:12px;color:#6B6560">Total outstanding: <strong>$${arrears.reduce((s,a)=>s+a.amount,0).toLocaleString()}</strong></p>`}
+
+  <div class="footer">
+    George Rental · ${today} · Confidential — for internal use only
+  </div>
+
+  <script>window.onload = () => { window.print(); }</script>
+</body>
+</html>`
+
+  const win = window.open('', '_blank', 'width=900,height=700')
+  if (win) { win.document.write(html); win.document.close() }
+}
+
 export default function Reports() {
   const { data, isLoading } = useReports()
   const { data: fxRate = 180 } = useFxRate()
@@ -127,7 +257,7 @@ export default function Reports() {
           <div style={{ fontSize: 14, color: 'var(--gr-stone-2)', marginTop: 4 }}>12-month performance overview</div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <Btn kind="ghost" icon={<IconPrinter size={15} />} onClick={() => window.print()}>Print</Btn>
+          <Btn kind="ghost" icon={<IconPrinter size={15} />} onClick={() => printReport(data, fxRate)}>Print report</Btn>
         </div>
       </div>
 

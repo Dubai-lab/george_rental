@@ -98,9 +98,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
 
-    // Fetch profile immediately — don't wait for onAuthStateChange chain
-    const p = await fetchProfile(data.user.id)
-    if (!p) throw new Error('Account not set up yet. Contact the property manager.')
+    // Race profile fetch against 8s timeout so the button never spins forever
+    const p = await Promise.race([
+      fetchProfile(data.user.id),
+      new Promise<null>(res => setTimeout(() => res(null), 8000)),
+    ])
+
+    if (!p) {
+      await supabase.auth.signOut()
+      throw new Error('Could not load your account. Please try again.')
+    }
     setUser(data.user)
     setProfile(p)
     return p.role

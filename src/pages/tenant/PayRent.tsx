@@ -50,13 +50,53 @@ function useTenantLease(userId: string | undefined) {
   })
 }
 
-// Current month + 1 ahead + 2 back
-const MONTHS = [
-  addMonths(new Date(), 1),
-  new Date(),
-  subMonths(new Date(), 1),
-  subMonths(new Date(), 2),
-].map(d => ({ key: format(d, 'yyyy-MM'), label: format(d, 'MMMM yyyy') }))
+function useLastPayment(userId: string | undefined) {
+  return useQuery<{ period_month: string; months_count: number } | null>({
+    queryKey: ['last-payment', userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('payments')
+        .select('period_month, months_count')
+        .eq('tenant_id', userId!)
+        .eq('status', 'confirmed')
+        .order('period_month', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      return data as { period_month: string; months_count: number } | null
+    },
+    staleTime: 30_000,
+  })
+}
+
+function nextStartMonth(lastPayment: { period_month: string; months_count: number } | null | undefined): string {
+  if (!lastPayment) return format(new Date(), 'yyyy-MM')
+  const start = parseISO(lastPayment.period_month + '-01')
+  return format(addMonths(start, lastPayment.months_count), 'yyyy-MM')
+}
+
+function coverageEndLabel(lastPayment: { period_month: string; months_count: number }): string {
+  const start = parseISO(lastPayment.period_month + '-01')
+  const end   = addMonths(start, lastPayment.months_count - 1)
+  return format(end, 'MMMM yyyy')
+}
+
+// Build months list: 3 months ahead + 3 months back from today (deduped, sorted)
+function buildMonthsList(extraMonth?: string) {
+  const months = [
+    addMonths(new Date(), 2),
+    addMonths(new Date(), 1),
+    new Date(),
+    subMonths(new Date(), 1),
+    subMonths(new Date(), 2),
+    subMonths(new Date(), 3),
+  ].map(d => ({ key: format(d, 'yyyy-MM'), label: format(d, 'MMMM yyyy') }))
+  if (extraMonth && !months.find(m => m.key === extraMonth)) {
+    const d = parseISO(extraMonth + '-01')
+    months.unshift({ key: extraMonth, label: format(d, 'MMMM yyyy') })
+  }
+  return months
+}
 
 const MONTH_PRESETS = [1, 2, 3, 6, 12]
 
@@ -73,10 +113,13 @@ export default function PayRent() {
   const toLrd = (usd: number) => toLrdFn(usd, fxRate)
   const { data: lease } = useTenantLease(profile?.id)
   const { data: paySettings } = usePaySettings()
+  const { data: lastPayment } = useLastPayment(profile?.id)
 
   const momoNumber  = paySettings?.momo_number ?? '088 605 5575'
   const momoName    = paySettings?.momo_name   ?? 'George Rental'
   const bankList    = paySettings?.banks ?? []
+
+  const defaultStart = nextStartMonth(lastPayment)
 
   const [step,        setStep]       = useState<1 | 2 | 3>(1)
   const [method,      setMethod]     = useState<Method>('mtn_momo')
@@ -85,10 +128,19 @@ export default function PayRent() {
   const [done,        setDone]       = useState(false)
   const [copied,      setCopied]     = useState(false)
 
-  const { register, handleSubmit, watch } = useForm<FormValues>({
-    defaultValues: { period_month: MONTHS[1].key },
+  const { register, handleSubmit, watch, setValue } = useForm<FormValues>({
+    defaultValues: { period_month: defaultStart },
   })
   const startMonth = watch('period_month')
+
+  // When lastPayment loads, update the form's start month
+  const [startMonthSynced, setStartMonthSynced] = useState(false)
+  if (lastPayment !== undefined && !startMonthSynced) {
+    setValue('period_month', nextStartMonth(lastPayment))
+    setStartMonthSynced(true)
+  }
+
+  const MONTHS = buildMonthsList(lastPayment ? nextStartMonth(lastPayment) : undefined)
 
   const monthlyRent = lease?.monthly_rent_usd ?? 0
   const totalUsd    = monthlyRent * monthsCount
@@ -137,7 +189,11 @@ export default function PayRent() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  function reset() { setDone(false); setStep(1); setProofFile(null); setMonthsCount(1) }
+  function reset() {
+    setDone(false); setStep(1); setProofFile(null); setMonthsCount(1)
+    setStartMonthSynced(false)
+    setValue('period_month', nextStartMonth(lastPayment))
+  }
 
   if (!lease) return (
     <div style={{ padding: 24, textAlign: 'center', paddingTop: 60 }}>
@@ -217,6 +273,27 @@ export default function PayRent() {
         {/* Step 1 — Method + Months */}
         {step === 1 && (
           <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+
+            {/* Paid-through banner */}
+            {lastPayment && (
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 10,
+                padding: '12px 14px', borderRadius: 12,
+                background: 'rgba(47,184,117,0.08)', border: '1px solid rgba(47,184,117,0.2)',
+                marginBottom: 20,
+              }}>
+                <span style={{ fontSize: 16 }}>✅</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gr-mint)' }}>
+                    Rent paid through {coverageEndLabel(lastPayment)}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--gr-stone-2)', marginTop: 3 }}>
+                    Your next payment will start from <strong style={{ color: 'var(--gr-ink)' }}>{format(parseISO(nextStartMonth(lastPayment) + '-01'), 'MMMM yyyy')}</strong>.
+                    Choose how many months to pay below.
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Months selector */}
             <div style={{ marginBottom: 24 }}>

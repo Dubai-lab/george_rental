@@ -425,6 +425,7 @@ export default function Stores() {
   const [deleting,      setDeleting]      = useState(false)
   const mapRef      = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<mapboxgl.Map | null>(null)
+  const markersRef  = useRef<mapboxgl.Marker[]>([])
   const qc          = useQueryClient()
 
   const { data: stores = [], isLoading } = useQuery({
@@ -531,18 +532,44 @@ export default function Stores() {
 
   useEffect(() => {
     const map = mapInstance.current
-    if (!map || !stores.length) return
-    const onLoad = () => {
-      stores.forEach(s => {
-        if (s.lat == null || s.lng == null) return
-        const ps = storePaymentStatus(s.id)
-        const color = ps === 'paid' ? '#2FB875' : ps === 'overdue' ? '#D11F2C' : ps === 'vacant' ? 'rgba(246,241,228,0.5)' : '#E9B949'
-        const el = document.createElement('div')
-        el.style.cssText = `width:28px;height:28px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;`
-        new mapboxgl.Marker({ element: el }).setLngLat([s.lng, s.lat]).setPopup(new mapboxgl.Popup({ offset: 16 }).setHTML(`<b>${s.name}</b><br>$${s.rent_usd}/mo`)).addTo(map)
+    if (!map) return
+    const m: mapboxgl.Map = map
+
+    function placeMarkers() {
+      // Remove all existing markers before re-adding
+      markersRef.current.forEach(mk => mk.remove())
+      markersRef.current = []
+
+      const coordStores = stores.filter(s => s.lat != null && s.lng != null)
+      if (coordStores.length === 0) return
+
+      const bounds = new mapboxgl.LngLatBounds()
+
+      coordStores.forEach(s => {
+        const ps    = storePaymentStatus(s.id)
+        const color = ps === 'paid' ? '#2FB875' : ps === 'overdue' ? '#D11F2C' : ps === 'vacant' ? '#9E9893' : '#E9B949'
+        const label = ps === 'paid' ? 'Paid' : ps === 'overdue' ? 'Overdue' : ps === 'vacant' ? 'Vacant' : 'Due'
+        const el    = document.createElement('div')
+        el.style.cssText = `width:30px;height:30px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;`
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([s.lng!, s.lat!])
+          .setPopup(new mapboxgl.Popup({ offset: 16 }).setHTML(
+            `<div style="font-family:sans-serif;padding:2px 0"><b style="font-size:13px">${s.name}</b><br><span style="font-size:12px;color:#555">${s.code} · $${s.rent_usd}/mo</span><br><span style="font-size:12px;color:${color};font-weight:600">${label}</span></div>`
+          ))
+          .addTo(m)
+        markersRef.current.push(marker)
+        bounds.extend([s.lng!, s.lat!])
       })
+
+      // Auto-pan/zoom to fit all pins
+      if (coordStores.length === 1) {
+        m.flyTo({ center: [coordStores[0].lng!, coordStores[0].lat!], zoom: 16 })
+      } else {
+        m.fitBounds(bounds, { padding: 80, maxZoom: 16, animate: true })
+      }
     }
-    if (map.loaded()) onLoad(); else map.on('load', onLoad)
+
+    if (m.loaded()) placeMarkers(); else m.once('load', placeMarkers)
   }, [stores, payments])
 
   const filterCounts = {

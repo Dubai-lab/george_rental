@@ -48,6 +48,29 @@ export default function AcceptInvite() {
     setError(null)
     const { error } = await supabase.auth.updateUser({ password })
     if (error) { setError(error.message); return }
+
+    // Create the lease from invite metadata now that account is activated
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const meta = user?.user_metadata
+      if (user && meta?.store_id) {
+        const leaseCode = `LS-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+        await supabase.from('leases').insert({
+          tenant_id:        user.id,
+          store_id:         meta.store_id,
+          start_date:       meta.start_date ?? new Date().toISOString().slice(0, 10),
+          monthly_rent_usd: meta.rent_usd ?? 0,
+          business_name:    meta.business_name ?? null,
+          business_type:    meta.business_type ?? null,
+          status:           'active',
+          lease_code:       leaseCode,
+        })
+        await supabase.from('stores').update({ status: 'occupied' }).eq('id', meta.store_id)
+      }
+    } catch {
+      // Lease creation failure doesn't block account activation
+    }
+
     setDone(true)
     setTimeout(() => navigate('/tenant', { replace: true }), 2000)
   }

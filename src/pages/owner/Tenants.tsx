@@ -38,12 +38,59 @@ function useTenants() {
   })
 }
 
+type AssignForm = { store_id: string; business_name: string; business_type: string; start_date: string }
+
+function useVacantStores() {
+  return useQuery<Store[]>({
+    queryKey: ['vacant-stores-assign'],
+    queryFn: async () => {
+      const { data } = await supabase.from('stores').select('*').eq('status', 'vacant').order('name')
+      return (data ?? []) as Store[]
+    },
+    staleTime: 30_000,
+  })
+}
+
 export default function Tenants() {
   const qc = useQueryClient()
   const { data: tenants = [], isLoading } = useTenants()
   const [q, setQ] = useState('')
   const [selected, setSelected] = useState<TenantRow | null>(null)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [assigning, setAssigning] = useState(false)
+  const [assignErr, setAssignErr] = useState('')
+  const [assignForm, setAssignForm] = useState<AssignForm>({ store_id: '', business_name: '', business_type: '', start_date: new Date().toISOString().slice(0, 10) })
+
+  const { data: vacantStores = [] } = useVacantStores()
+
+  const assignLease = useMutation({
+    mutationFn: async () => {
+      if (!selected || !assignForm.store_id) throw new Error('Select a store')
+      const store = vacantStores.find(s => s.id === assignForm.store_id)
+      if (!store) throw new Error('Store not found')
+      const leaseCode = `LS-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+      const { error: leaseErr } = await supabase.from('leases').insert({
+        tenant_id:        selected.id,
+        store_id:         assignForm.store_id,
+        start_date:       assignForm.start_date,
+        monthly_rent_usd: store.rent_usd,
+        business_name:    assignForm.business_name || null,
+        business_type:    assignForm.business_type || null,
+        status:           'active',
+        lease_code:       leaseCode,
+      })
+      if (leaseErr) throw leaseErr
+      await supabase.from('stores').update({ status: 'occupied' }).eq('id', assignForm.store_id)
+    },
+    onSuccess: () => {
+      setAssigning(false)
+      setAssignErr('')
+      setSelected(null)
+      qc.invalidateQueries({ queryKey: ['tenants'] })
+      qc.invalidateQueries({ queryKey: ['vacant-stores-assign'] })
+    },
+    onError: (e: any) => setAssignErr(e.message ?? 'Failed to assign store'),
+  })
 
   const filtered = tenants.filter(t =>
     !q || t.full_name.toLowerCase().includes(q.toLowerCase()) ||
@@ -200,7 +247,7 @@ export default function Tenants() {
                 </Section>
 
                 {/* Lease */}
-                {selected.lease && (
+                {selected.lease ? (
                   <Section title="Current Lease">
                     <InfoRow icon={<IconStore size={15} />} label="Store" value={`${selected.lease.store?.code ?? ''} · ${selected.lease.store?.name ?? ''}`} />
                     <InfoRow label="Business" value={selected.lease.business_name ?? '—'} />
@@ -211,6 +258,56 @@ export default function Tenants() {
                       label="Period"
                       value={`${new Date(selected.lease.start_date).toLocaleDateString()} — ${selected.lease.end_date ? new Date(selected.lease.end_date).toLocaleDateString() : 'Open-ended'}`}
                     />
+                  </Section>
+                ) : (
+                  <Section title="Store Assignment">
+                    {!assigning ? (
+                      <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                        <div style={{ fontSize: 13, color: 'var(--gr-stone-2)', marginBottom: 14 }}>This tenant has no active lease.</div>
+                        <button
+                          type="button"
+                          onClick={() => { setAssigning(true); setAssignErr('') }}
+                          style={{ padding: '10px 20px', borderRadius: 10, background: 'var(--gr-crimson)', color: '#fff', border: 'none', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                        >
+                          + Assign Store
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {assignErr && <div style={{ fontSize: 12, color: 'var(--gr-crimson)', padding: '8px 12px', background: 'rgba(209,31,44,0.06)', borderRadius: 8 }}>{assignErr}</div>}
+
+                        <div>
+                          <label style={fldLabel}>Store</label>
+                          <select title="Select store" value={assignForm.store_id} onChange={e => setAssignForm(f => ({ ...f, store_id: e.target.value }))} style={fldInput}>
+                            <option value="">— select vacant store —</option>
+                            {vacantStores.map(s => <option key={s.id} value={s.id}>{s.name} · ${s.rent_usd}/mo</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={fldLabel}>Business name</label>
+                          <input value={assignForm.business_name} onChange={e => setAssignForm(f => ({ ...f, business_name: e.target.value }))} placeholder="e.g. Mariama Tailoring" style={fldInput} />
+                        </div>
+                        <div>
+                          <label style={fldLabel}>Business type</label>
+                          <input value={assignForm.business_type} onChange={e => setAssignForm(f => ({ ...f, business_type: e.target.value }))} placeholder="e.g. Tailoring, Salon…" style={fldInput} />
+                        </div>
+                        <div>
+                          <label style={fldLabel}>Lease start date</label>
+                          <input type="date" title="Lease start date" value={assignForm.start_date} onChange={e => setAssignForm(f => ({ ...f, start_date: e.target.value }))} style={fldInput} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                          <button type="button" onClick={() => { setAssigning(false); setAssignErr('') }} style={{ flex: 1, height: 38, borderRadius: 8, border: '1px solid var(--gr-line)', background: '#fff', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                          <button
+                            type="button"
+                            onClick={() => assignLease.mutate()}
+                            disabled={assignLease.isPending || !assignForm.store_id}
+                            style={{ flex: 1, height: 38, borderRadius: 8, background: 'var(--gr-crimson)', color: '#fff', border: 'none', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: assignLease.isPending ? 0.7 : 1 }}
+                          >
+                            {assignLease.isPending ? 'Saving…' : 'Confirm'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </Section>
                 )}
               </div>
@@ -225,6 +322,9 @@ export default function Tenants() {
     </div>
   )
 }
+
+const fldLabel: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--gr-stone-2)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }
+const fldInput: React.CSSProperties = { width: '100%', height: 38, padding: '0 10px', borderRadius: 8, border: '1px solid var(--gr-line)', background: '#fff', fontSize: 13, color: 'var(--gr-ink)', outline: 'none' }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

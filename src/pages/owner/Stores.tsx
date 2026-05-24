@@ -350,24 +350,34 @@ function StoreForm({ areas, initial, onClose, onSaved }: StoreFormProps) {
 // ── Store row dots menu ─────────────────────────────────────────
 function StoreMenu({ store, onEdit, onToggle, onDelete }: { store: StoreWithArea; onEdit: () => void; onToggle: () => void; onDelete: () => void }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos]   = useState({ top: 0, right: 0 })
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const btnRef  = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    function handler(e: MouseEvent) { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false) }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  function handleOpen() {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
+    }
+    setOpen(v => !v)
+  }
+
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button onClick={() => setOpen(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr-stone-2)', padding: 4, borderRadius: 6 }}>
+    <div ref={wrapRef}>
+      <button ref={btnRef} onClick={handleOpen} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr-stone-2)', padding: 4, borderRadius: 6 }}>
         <IconDots size={16} stroke="currentColor" />
       </button>
       <AnimatePresence>
         {open && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-            style={{ position: 'absolute', right: 0, top: '100%', zIndex: 50, background: '#fff', border: '1px solid var(--gr-line)', borderRadius: 10, boxShadow: '0 8px 24px rgba(6,9,20,0.12)', overflow: 'hidden', minWidth: 160 }}
+            style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 9999, background: '#fff', border: '1px solid var(--gr-line)', borderRadius: 10, boxShadow: '0 8px 24px rgba(6,9,20,0.12)', overflow: 'hidden', minWidth: 160 }}
           >
             <button onClick={() => { setOpen(false); onEdit() }} style={menuBtn}>
               ✏️ Edit store

@@ -74,6 +74,8 @@ export default function Payments() {
         .update({ status: action, confirmed_at: new Date().toISOString(), confirmed_by: profile?.id, notes: notes || null })
         .eq('id', id)
       if (error) throw error
+      // Fire email notification — non-blocking, failure doesn't break the confirm action
+      supabase.functions.invoke('notify-payment', { body: { payment_id: id, action } }).catch(() => {})
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['payments'] })

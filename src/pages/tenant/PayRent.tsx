@@ -93,7 +93,7 @@ export default function PayRent() {
         proofUrl = publicUrl
       }
 
-      const { error } = await supabase.from('payments').insert({
+      const { data: inserted, error } = await supabase.from('payments').insert({
         lease_id:        lease.id,
         tenant_id:       profile.id,
         store_id:        lease.store_id,
@@ -106,8 +106,12 @@ export default function PayRent() {
         proof_url:       proofUrl,
         notes:           values.notes || null,
         status:          'pending',
-      })
+      }).select('id').single()
       if (error) throw error
+      // Notify owner of new payment — non-blocking
+      if (inserted?.id) {
+        supabase.functions.invoke('notify-payment', { body: { payment_id: inserted.id, action: 'submitted' } }).catch(() => {})
+      }
     },
     onSuccess: () => setDone(true),
   })

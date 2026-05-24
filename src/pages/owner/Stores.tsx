@@ -420,6 +420,18 @@ export default function Stores() {
     },
   })
 
+  const { data: leases = [] } = useQuery({
+    queryKey: ['stores-active-leases'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('leases')
+        .select('store_id, tenant:profiles(full_name)')
+        .eq('status', 'active')
+      return (data ?? []) as { store_id: string; tenant: { full_name: string } | null }[]
+    },
+    staleTime: 60_000,
+  })
+
   const { data: payments = [] } = useQuery({
     queryKey: ['payments-month'],
     queryFn: async () => {
@@ -521,6 +533,10 @@ export default function Stores() {
     { id: 'vacant',  label: 'Vacant',  tone: 'gold' },
   ]
 
+  function getTenantName(storeId: string): string | null {
+    return leases.find(l => l.store_id === storeId)?.tenant?.full_name ?? null
+  }
+
   function refreshStores() { qc.invalidateQueries({ queryKey: ['stores-full'] }) }
 
   return (
@@ -583,6 +599,7 @@ export default function Stores() {
               title={area}
               stores={areaStores}
               getStatus={storePaymentStatus}
+              getTenant={getTenantName}
               onEdit={s => setEditStore(s)}
               onToggle={s => toggleStatus.mutate(s)}
               onDelete={s => setConfirmDelete(s)}
@@ -661,10 +678,11 @@ export default function Stores() {
 }
 
 // ── Area group ──────────────────────────────────────────────────
-function AreaGroup({ title, stores, getStatus, onEdit, onToggle, onDelete }: {
+function AreaGroup({ title, stores, getStatus, getTenant, onEdit, onToggle, onDelete }: {
   title: string
   stores: StoreWithArea[]
   getStatus: (id: string) => string
+  getTenant: (id: string) => string | null
   onEdit: (s: StoreWithArea) => void
   onToggle: (s: StoreWithArea) => void
   onDelete: (s: StoreWithArea) => void
@@ -712,7 +730,10 @@ function AreaGroup({ title, stores, getStatus, onEdit, onToggle, onDelete }: {
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gr-ink)' }}>{s.name}</div>
                   </div>
                   <div style={{ fontSize: 13, color: s.status === 'vacant' ? 'var(--gr-stone-2)' : 'var(--gr-ink)' }}>
-                    {s.status === 'vacant' ? <span style={{ fontStyle: 'italic' }}>Unoccupied</span> : '—'}
+                    {s.status === 'vacant'
+                      ? <span style={{ fontStyle: 'italic' }}>Unoccupied</span>
+                      : (getTenant(s.id) ?? <span style={{ color: 'var(--gr-stone-2)' }}>—</span>)
+                    }
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--gr-stone-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {s.address ?? '—'}

@@ -10,13 +10,39 @@ import { IconEye, IconEyeOff, IconCheck } from '@/components/ui/Icons'
 type FormValues = { password: string; confirm: string }
 
 export default function AcceptInvite() {
-  const navigate  = useNavigate()
-  const [done, setDone]     = useState(false)
-  const [error, setError]   = useState<string | null>(null)
-  const [showPw, setShowPw] = useState(false)
+  const navigate = useNavigate()
+  const [done, setDone]               = useState(false)
+  const [error, setError]             = useState<string | null>(null)
+  const [showPw, setShowPw]           = useState(false)
+  const [sessionReady, setSessionReady] = useState(false)
+  const [linkError, setLinkError]     = useState(false)
 
   const { register, handleSubmit, watch, formState: { isSubmitting, errors } } = useForm<FormValues>()
   const pw = watch('password', '')
+
+  useEffect(() => {
+    // Check if there's already a valid session (e.g. page reload after hash was consumed)
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) { setSessionReady(true); return }
+    })
+
+    // Supabase processes the invite hash and fires SIGNED_IN automatically
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        setSessionReady(true)
+      }
+    })
+
+    // If no session after 10s, the link is expired/invalid
+    const timeout = setTimeout(() => {
+      setSessionReady(prev => {
+        if (!prev) setLinkError(true)
+        return prev
+      })
+    }, 10000)
+
+    return () => { subscription.unsubscribe(); clearTimeout(timeout) }
+  }, [])
 
   async function onSubmit({ password }: FormValues) {
     setError(null)
@@ -60,6 +86,30 @@ export default function AcceptInvite() {
             <div style={{ fontFamily: 'var(--f-display)', fontSize: 22, fontWeight: 700, color: 'var(--gr-ink)' }}>Account activated!</div>
             <div style={{ fontSize: 14, color: 'var(--gr-stone-2)', marginTop: 8 }}>Redirecting to your home screen…</div>
           </div>
+
+        ) : linkError ? (
+          <div style={{ padding: '32px', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 8 }}>Invite link expired</div>
+            <div style={{ fontSize: 14, color: 'var(--gr-stone-2)', lineHeight: 1.6, marginBottom: 24 }}>
+              This link has expired or already been used. Ask the property manager to resend the invite.
+            </div>
+            <a href="/sign-in" style={{ fontSize: 13, color: 'var(--gr-crimson)', fontWeight: 500 }}>← Back to sign in</a>
+          </div>
+
+        ) : !sessionReady ? (
+          <div style={{ padding: '40px 32px', textAlign: 'center' }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              border: '3px solid rgba(209,31,44,0.15)',
+              borderTopColor: 'var(--gr-crimson)',
+              animation: 'spin 0.8s linear infinite',
+              margin: '0 auto 16px',
+            }} />
+            <div style={{ fontSize: 14, color: 'var(--gr-stone-2)' }}>Verifying your invite link…</div>
+            <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+          </div>
+
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} style={{ padding: '28px 32px 32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
             {error && (

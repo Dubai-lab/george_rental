@@ -31,6 +31,8 @@ function StoreForm({ areas, initial, onClose, onSaved }: StoreFormProps) {
   const [areaId,      setAreaId]      = useState(initial?.area_id ?? '')
   const [rent,        setRent]        = useState(String(initial?.rent_usd ?? ''))
   const [photos,      setPhotos]      = useState<string[]>(initial?.photos ?? [])
+  const [lat,         setLat]         = useState(initial?.lat != null ? String(initial.lat) : '')
+  const [lng,         setLng]         = useState(initial?.lng != null ? String(initial.lng) : '')
   const [videoUrl,    setVideoUrl]    = useState(initial?.video_url ?? '')
   const [err,         setErr]         = useState<string | null>(null)
   const [saving,      setSaving]      = useState(false)
@@ -121,6 +123,8 @@ function StoreForm({ areas, initial, onClose, onSaved }: StoreFormProps) {
       address:   address.trim() || null,
       area_id:   areaId || null,
       rent_usd:  rentNum,
+      lat:       lat.trim() !== '' ? parseFloat(lat) : null,
+      lng:       lng.trim() !== '' ? parseFloat(lng) : null,
       photos,
       photo_url: photos[0] ?? null,
       video_url: videoUrl.trim() || null,
@@ -237,6 +241,20 @@ function StoreForm({ areas, initial, onClose, onSaved }: StoreFormProps) {
               <label style={lbl}>Address</label>
               <input value={address} onChange={e => setAddress(e.target.value)} placeholder="e.g. 20 Broad St" style={inp} />
             </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <label style={lbl}>Latitude <span style={{ fontWeight: 400, color: 'var(--gr-stone-2)' }}>(optional)</span></label>
+              <input value={lat} onChange={e => setLat(e.target.value)} type="number" step="any" placeholder="e.g. 6.3390" style={inp} />
+            </div>
+            <div>
+              <label style={lbl}>Longitude <span style={{ fontWeight: 400, color: 'var(--gr-stone-2)' }}>(optional)</span></label>
+              <input value={lng} onChange={e => setLng(e.target.value)} type="number" step="any" placeholder="e.g. -10.7957" style={inp} />
+            </div>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--gr-stone-2)', marginTop: -10 }}>
+            Open Google Maps → right-click the store location → copy the two numbers (lat, lng) that appear.
           </div>
 
           {/* ── Photos ─────────────────────────────────────── */}

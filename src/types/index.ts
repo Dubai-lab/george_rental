@@ -68,6 +68,7 @@ export interface Payment {
   method:          PaymentMethod
   period_month:    string
   months_count:    number
+  due_day:         number | null
   transaction_ref: string | null
   proof_url:       string | null
   status:          PaymentStatus

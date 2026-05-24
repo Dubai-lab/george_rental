@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
-import { format, addMonths, subMonths, parseISO, setDate, subDays } from 'date-fns'
+import { format, addMonths, subMonths, parseISO, setDate, subDays, getDaysInMonth } from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFxRate, toLrd as toLrdFn } from '@/hooks/useFxRate'
@@ -17,19 +17,27 @@ interface BankAccount { bank: string; account: string; name: string }
 interface PaySettings { momo_number: string; momo_name: string; banks: BankAccount[] }
 
 // ── Billing helpers (all anchored to dueDay of month) ────────────────────────
-// e.g. dueDay=24, period "2026-05", 6 months → May 24 – Nov 23, next due Nov 24
+// dueDay is clamped to the actual days in each month, so a lease starting on
+// the 31st uses the 28th/29th in February and the 30th in April/June/Sep/Nov.
+
+function clampDay(monthDate: Date, dueDay: number): number {
+  return Math.min(dueDay, getDaysInMonth(monthDate))
+}
 
 function billingStartDate(periodMonth: string, dueDay: number): Date {
-  return setDate(parseISO(periodMonth + '-01'), dueDay)
+  const monthDate = parseISO(periodMonth + '-01')
+  return setDate(monthDate, clampDay(monthDate, dueDay))
 }
 
 function billingEndDate(periodMonth: string, monthsCount: number, dueDay: number): Date {
-  const nextDue = setDate(addMonths(parseISO(periodMonth + '-01'), monthsCount), dueDay)
+  const nextMonthDate = addMonths(parseISO(periodMonth + '-01'), monthsCount)
+  const nextDue = setDate(nextMonthDate, clampDay(nextMonthDate, dueDay))
   return subDays(nextDue, 1)
 }
 
 function nextDueDateFor(periodMonth: string, monthsCount: number, dueDay: number): Date {
-  return setDate(addMonths(parseISO(periodMonth + '-01'), monthsCount), dueDay)
+  const nextMonthDate = addMonths(parseISO(periodMonth + '-01'), monthsCount)
+  return setDate(nextMonthDate, clampDay(nextMonthDate, dueDay))
 }
 
 export function periodRangeLabel(periodMonth: string, monthsCount: number, dueDay?: number | null): string {

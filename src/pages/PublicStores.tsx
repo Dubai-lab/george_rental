@@ -8,6 +8,7 @@ import GRLogo from '@/components/ui/GRLogo'
 import Pill from '@/components/ui/Pill'
 import { IconSearch, IconArrow } from '@/components/ui/Icons'
 import StoreThumb from '@/components/ui/StoreThumb'
+import { useWindowWidth } from '@/hooks/useWindowWidth'
 
 type StoreWithArea = Store & { area: Pick<Area, 'name'> | null }
 
@@ -32,6 +33,8 @@ export default function PublicStores() {
   const { data: stores = [], isLoading } = usePublicStores()
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState<FilterStatus>('all')
+  const w = useWindowWidth()
+  const isMobile = w < 640
 
   const filtered = stores.filter(s => {
     const matchQ = !q ||
@@ -50,7 +53,7 @@ export default function PublicStores() {
     <div style={{ minHeight: '100vh', background: 'var(--gr-paper)', fontFamily: 'var(--f-body)' }}>
       {/* Nav */}
       <header style={{
-        background: 'var(--gr-midnight)', padding: '0 48px', height: 68,
+        background: 'var(--gr-midnight)', padding: isMobile ? '0 20px' : '0 48px', height: 68,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         position: 'sticky', top: 0, zIndex: 50,
         borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -58,9 +61,13 @@ export default function PublicStores() {
         <Link to="/" style={{ textDecoration: 'none' }}>
           <GRLogo size={20} />
         </Link>
-        <nav style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
-          <Link to="/" style={{ fontSize: 13, color: 'rgba(246,241,228,0.65)', textDecoration: 'none' }}>Home</Link>
-          <Link to="/stores" style={{ fontSize: 13, color: 'var(--gr-cream)', fontWeight: 600, textDecoration: 'none' }}>Stores</Link>
+        <nav style={{ display: 'flex', gap: isMobile ? 14 : 28, alignItems: 'center' }}>
+          {!isMobile && (
+            <>
+              <Link to="/" style={{ fontSize: 13, color: 'rgba(246,241,228,0.65)', textDecoration: 'none' }}>Home</Link>
+              <Link to="/stores" style={{ fontSize: 13, color: 'var(--gr-cream)', fontWeight: 600, textDecoration: 'none' }}>Stores</Link>
+            </>
+          )}
           <Link to="/sign-in" style={{
             height: 34, padding: '0 16px', background: 'var(--gr-crimson)', color: '#fff',
             borderRadius: 8, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center',
@@ -73,23 +80,23 @@ export default function PublicStores() {
 
       {/* Hero strip */}
       <div style={{
-        background: 'var(--gr-midnight)', padding: '40px 48px 48px',
+        background: 'var(--gr-midnight)', padding: isMobile ? '28px 20px 32px' : '40px 48px 48px',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
         <div style={{ maxWidth: 860, margin: '0 auto' }}>
           <div style={{ fontSize: 12, color: 'rgba(246,241,228,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
             Monrovia Commercial Properties
           </div>
-          <div style={{ fontFamily: 'var(--f-display)', fontSize: 36, fontWeight: 700, color: 'var(--gr-cream)', letterSpacing: '-0.02em', marginBottom: 8 }}>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: isMobile ? 28 : 36, fontWeight: 700, color: 'var(--gr-cream)', letterSpacing: '-0.02em', marginBottom: 8 }}>
             Available Stores
           </div>
-          <div style={{ fontSize: 15, color: 'rgba(246,241,228,0.6)', lineHeight: 1.6 }}>
+          <div style={{ fontSize: 14, color: 'rgba(246,241,228,0.6)', lineHeight: 1.6 }}>
             Browse all {stores.length} George Rental storefronts across 4 areas in Monrovia.
             {vacantCount > 0 && <> <span style={{ color: 'var(--gr-mint)', fontWeight: 600 }}>{vacantCount} currently vacant</span> and available for lease.</>}
           </div>
 
           {/* Search */}
-          <div style={{ position: 'relative', marginTop: 24, maxWidth: 440 }}>
+          <div style={{ position: 'relative', marginTop: 20, maxWidth: isMobile ? '100%' : 440 }}>
             <IconSearch size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(246,241,228,0.4)' }} />
             <input
               value={q}
@@ -99,7 +106,7 @@ export default function PublicStores() {
                 width: '100%', height: 46, paddingLeft: 42, paddingRight: 16,
                 borderRadius: 12, border: '1px solid rgba(255,255,255,0.12)',
                 background: 'rgba(255,255,255,0.07)', fontSize: 14,
-                color: 'var(--gr-cream)', outline: 'none',
+                color: 'var(--gr-cream)', outline: 'none', boxSizing: 'border-box',
               }}
             />
           </div>
@@ -116,6 +123,7 @@ export default function PublicStores() {
             { label: `Occupied (${occupiedCount})`,    value: 'occupied' as FilterStatus },
           ]).map(t => (
             <button
+              type="button"
               key={t.value}
               onClick={() => setFilter(t.value)}
               style={{
@@ -225,7 +233,7 @@ export default function PublicStores() {
 
         {/* CTA at bottom */}
         <div style={{
-          marginTop: 56, padding: '36px 40px', borderRadius: 20,
+          marginTop: 48, padding: isMobile ? '28px 20px' : '36px 40px', borderRadius: 20,
           background: 'var(--gr-midnight)', textAlign: 'center',
         }}>
           <div style={{ fontFamily: 'var(--f-display)', fontSize: 24, fontWeight: 700, color: 'var(--gr-cream)', marginBottom: 8 }}>

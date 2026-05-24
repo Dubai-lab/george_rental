@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import GRLogo from '@/components/ui/GRLogo'
 import { IconArrow, IconLock } from '@/components/ui/Icons'
+import { useWindowWidth } from '@/hooks/useWindowWidth'
 
 const STATS = [
   { k: '50',      l: 'storefronts you can find' },
@@ -11,6 +12,9 @@ const STATS = [
 ]
 
 export default function Landing() {
+  const w = useWindowWidth()
+  const isMobile = w < 640
+
   return (
     <div style={{
       minHeight: '100vh', background: 'var(--gr-grad-hero)',
@@ -29,25 +33,30 @@ export default function Landing() {
 
       {/* ── Nav ── */}
       <header style={{
-        position: 'relative', zIndex: 5, height: 80,
-        padding: '0 64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        position: 'relative', zIndex: 5, height: 68,
+        padding: isMobile ? '0 20px' : '0 64px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <GRLogo size={22} />
-        <nav style={{ display: 'flex', gap: 36, fontSize: 14, color: 'rgba(246,241,228,0.78)' }}>
-          <Link to="/stores" style={navLink}>Stores</Link>
-          <Link to="/sign-in" style={navLink}>Pay rent</Link>
-          <a href="#help" style={navLink}>Help</a>
-          <a href="#contact" style={navLink}>Contact</a>
-        </nav>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <Link to="/sign-in" style={{
-            height: 38, padding: '0 16px', background: 'transparent',
-            color: 'rgba(246,241,228,0.85)', border: '1px solid rgba(246,241,228,0.18)',
-            borderRadius: 8, fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center',
-            textDecoration: 'none',
-          }}>
-            Owner sign in
-          </Link>
+        <GRLogo size={20} />
+        {!isMobile && (
+          <nav style={{ display: 'flex', gap: 36, fontSize: 14, color: 'rgba(246,241,228,0.78)' }}>
+            <Link to="/stores" style={navLink}>Stores</Link>
+            <Link to="/sign-in" style={navLink}>Pay rent</Link>
+            <a href="#help" style={navLink}>Help</a>
+            <a href="#contact" style={navLink}>Contact</a>
+          </nav>
+        )}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {!isMobile && (
+            <Link to="/sign-in" style={{
+              height: 38, padding: '0 16px', background: 'transparent',
+              color: 'rgba(246,241,228,0.85)', border: '1px solid rgba(246,241,228,0.18)',
+              borderRadius: 8, fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center',
+              textDecoration: 'none',
+            }}>
+              Owner sign in
+            </Link>
+          )}
           <Link to="/sign-in" style={{
             height: 38, padding: '0 18px', background: 'var(--gr-crimson)', color: '#fff',
             border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
@@ -62,16 +71,19 @@ export default function Landing() {
 
       {/* ── Hero ── */}
       <div style={{
-        position: 'relative', zIndex: 4, padding: '40px 64px 0',
-        display: 'grid', gridTemplateColumns: '600px 1fr', gap: 80,
-        minHeight: 'calc(100vh - 190px)',
+        position: 'relative', zIndex: 4,
+        padding: isMobile ? '28px 20px 0' : '40px 64px 0',
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '600px 1fr',
+        gap: isMobile ? 0 : 80,
+        minHeight: isMobile ? 'auto' : 'calc(100vh - 190px)',
       }}>
         {/* Left copy */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
-          style={{ paddingTop: 24 }}
+          style={{ paddingTop: isMobile ? 8 : 24, paddingBottom: isMobile ? 40 : 0 }}
         >
           {/* Badge */}
           <div style={{
@@ -79,17 +91,18 @@ export default function Landing() {
             padding: '6px 12px 6px 6px',
             background: 'rgba(246,241,228,0.06)',
             border: '1px solid rgba(246,241,228,0.12)',
-            borderRadius: 999, fontSize: 12, color: 'rgba(246,241,228,0.7)', marginBottom: 28,
+            borderRadius: 999, fontSize: 12, color: 'rgba(246,241,228,0.7)', marginBottom: 24,
           }}>
             <span style={{ padding: '3px 10px', background: 'var(--gr-crimson)', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em' }}>
               FOR TENANTS
             </span>
-            For shopkeepers renting from George Rental in Monrovia
+            For shopkeepers renting from George Rental
           </div>
 
           {/* Headline */}
           <h1 style={{
-            fontFamily: 'var(--f-display)', fontSize: 'clamp(56px, 6vw, 84px)',
+            fontFamily: 'var(--f-display)',
+            fontSize: isMobile ? 'clamp(44px, 12vw, 60px)' : 'clamp(56px, 6vw, 84px)',
             fontWeight: 700, lineHeight: 0.96, letterSpacing: '-0.035em',
             margin: 0, color: 'var(--gr-cream)',
           }}>
@@ -99,18 +112,22 @@ export default function Landing() {
           </h1>
 
           <p style={{
-            marginTop: 28, maxWidth: 520, fontSize: 18, lineHeight: 1.55,
+            marginTop: 24, maxWidth: isMobile ? '100%' : 520, fontSize: isMobile ? 16 : 18, lineHeight: 1.55,
             color: 'rgba(246,241,228,0.72)', fontWeight: 400,
           }}>
             Pay your monthly rent through MTN MoMo or LBDI bank transfer, upload your proof, and
             keep every receipt on your phone. From any phone, any browser — no app to install.
           </p>
 
-          <div style={{ marginTop: 36, display: 'flex', gap: 14 }}>
+          <div style={{
+            marginTop: 32, display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: 12,
+          }}>
             <Link to="/sign-in" style={{
               height: 52, padding: '0 24px', background: 'var(--gr-crimson)', color: '#fff',
               border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 600,
-              display: 'inline-flex', alignItems: 'center', gap: 10,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               boxShadow: '0 10px 30px rgba(209,31,44,0.35)',
               textDecoration: 'none',
             }}>
@@ -119,7 +136,7 @@ export default function Landing() {
             <Link to="/sign-in" style={{
               height: 52, padding: '0 22px', background: 'transparent', color: 'var(--gr-cream)',
               border: '1px solid rgba(246,241,228,0.22)', borderRadius: 10, fontSize: 15, fontWeight: 500,
-              display: 'inline-flex', alignItems: 'center', gap: 10,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               textDecoration: 'none',
             }}>
               <IconLock size={15} stroke="var(--gr-cream)" />
@@ -129,86 +146,88 @@ export default function Landing() {
 
           {/* Trust strip */}
           <div style={{
-            marginTop: 56, paddingTop: 28, borderTop: '1px solid rgba(246,241,228,0.10)',
-            display: 'flex', alignItems: 'center', gap: 36, fontSize: 12,
-            color: 'rgba(246,241,228,0.55)', letterSpacing: '0.06em', textTransform: 'uppercase',
+            marginTop: 48, paddingTop: 24, borderTop: '1px solid rgba(246,241,228,0.10)',
+            display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: isMobile ? 14 : 36,
+            fontSize: 12, color: 'rgba(246,241,228,0.55)', letterSpacing: '0.06em', textTransform: 'uppercase',
           }}>
             <span>Payments via</span>
             <span style={{ fontFamily: 'var(--f-display)', fontWeight: 700, fontSize: 16, letterSpacing: '-0.02em', color: '#FFCC00' }}>MTN MoMo</span>
-            <span style={{ width: 1, height: 18, background: 'rgba(246,241,228,0.18)' }} />
+            <span style={{ width: 1, height: 18, background: 'rgba(246,241,228,0.18)', display: isMobile ? 'none' : 'block' }} />
             <span style={{ fontFamily: 'var(--f-display)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em', color: 'var(--gr-cream)' }}>LBDI · Ecobank · UBA</span>
           </div>
         </motion.div>
 
-        {/* Right — floating card stack */}
-        <motion.div
-          initial={{ opacity: 0, x: 40 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.7, ease: 'easeOut', delay: 0.15 }}
-          style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          {/* Glow */}
-          <div style={{
-            position: 'absolute', top: '20%', left: '30%', width: 400, height: 400, borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(31,58,122,0.55) 0%, rgba(31,58,122,0) 60%)',
-            filter: 'blur(8px)', pointerEvents: 'none',
-          }} />
+        {/* Right — floating card stack (desktop only) */}
+        {!isMobile && (
+          <motion.div
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7, ease: 'easeOut', delay: 0.15 }}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {/* Glow */}
+            <div style={{
+              position: 'absolute', top: '20%', left: '30%', width: 400, height: 400, borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(31,58,122,0.55) 0%, rgba(31,58,122,0) 60%)',
+              filter: 'blur(8px)', pointerEvents: 'none',
+            }} />
 
-          {/* Card stack */}
-          <div style={{ position: 'relative', width: 460, height: 560 }}>
-            {/* Back card - stores panel */}
-            <motion.div
-              animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-              style={{
-                position: 'absolute', top: 20, left: 0, width: 400, height: 260,
-                background: '#fff', borderRadius: 16,
-                boxShadow: '0 40px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(11,26,61,0.12)',
-              }}
-            >
-              <MiniStoresCard />
-            </motion.div>
+            {/* Card stack */}
+            <div style={{ position: 'relative', width: 460, height: 560 }}>
+              {/* Back card - stores panel */}
+              <motion.div
+                animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                style={{
+                  position: 'absolute', top: 20, left: 0, width: 400, height: 260,
+                  background: '#fff', borderRadius: 16,
+                  boxShadow: '0 40px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(11,26,61,0.12)',
+                }}
+              >
+                <MiniStoresCard />
+              </motion.div>
 
-            {/* Middle card - dashboard */}
-            <motion.div
-              animate={{ y: [0, -6, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-              style={{
-                position: 'absolute', top: 120, left: 60, width: 380, height: 240,
-                background: '#fff', borderRadius: 16,
-                boxShadow: '0 60px 100px rgba(0,0,0,0.5), 0 0 0 1px rgba(11,26,61,0.12)',
-              }}
-            >
-              <MiniDashCard />
-            </motion.div>
+              {/* Middle card - dashboard */}
+              <motion.div
+                animate={{ y: [0, -6, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+                style={{
+                  position: 'absolute', top: 120, left: 60, width: 380, height: 240,
+                  background: '#fff', borderRadius: 16,
+                  boxShadow: '0 60px 100px rgba(0,0,0,0.5), 0 0 0 1px rgba(11,26,61,0.12)',
+                }}
+              >
+                <MiniDashCard />
+              </motion.div>
 
-            {/* Front card - receipt */}
-            <motion.div
-              animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-              style={{
-                position: 'absolute', top: 260, left: 20, width: 220, height: 290,
-                background: 'var(--gr-paper)', borderRadius: 14,
-                boxShadow: '0 80px 140px rgba(0,0,0,0.6), 0 0 0 1px rgba(11,26,61,0.15)',
-              }}
-            >
-              <MiniReceiptCard />
-            </motion.div>
+              {/* Front card - receipt */}
+              <motion.div
+                animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+                style={{
+                  position: 'absolute', top: 260, left: 20, width: 220, height: 290,
+                  background: 'var(--gr-paper)', borderRadius: 14,
+                  boxShadow: '0 80px 140px rgba(0,0,0,0.6), 0 0 0 1px rgba(11,26,61,0.15)',
+                }}
+              >
+                <MiniReceiptCard />
+              </motion.div>
 
-            {/* MTN chip */}
-            <motion.div
-              animate={{ y: [0, -12, 0], rotate: [8, 12, 8] }}
-              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
-              style={{
-                position: 'absolute', top: 30, right: 0, width: 110, height: 110, borderRadius: 22,
-                background: 'linear-gradient(135deg, #FFCC00 0%, #F2A900 100%)',
-                boxShadow: '0 30px 60px rgba(255,180,0,0.35)',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                color: '#0B1A3D',
-              }}
-            >
-              <div style={{ fontFamily: 'var(--f-display)', fontWeight: 800, fontSize: 22, letterSpacing: '-0.04em', lineHeight: 1 }}>MTN</div>
-              <div style={{ fontFamily: 'var(--f-display)', fontWeight: 600, fontSize: 12, marginTop: 4, letterSpacing: '0.02em' }}>MoMo</div>
-            </motion.div>
-          </div>
-        </motion.div>
+              {/* MTN chip */}
+              <motion.div
+                animate={{ y: [0, -12, 0], rotate: [8, 12, 8] }}
+                transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+                style={{
+                  position: 'absolute', top: 30, right: 0, width: 110, height: 110, borderRadius: 22,
+                  background: 'linear-gradient(135deg, #FFCC00 0%, #F2A900 100%)',
+                  boxShadow: '0 30px 60px rgba(255,180,0,0.35)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  color: '#0B1A3D',
+                }}
+              >
+                <div style={{ fontFamily: 'var(--f-display)', fontWeight: 800, fontSize: 22, letterSpacing: '-0.04em', lineHeight: 1 }}>MTN</div>
+                <div style={{ fontFamily: 'var(--f-display)', fontWeight: 600, fontSize: 12, marginTop: 4, letterSpacing: '0.02em' }}>MoMo</div>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* ── Bottom KPI strip ── */}
@@ -216,8 +235,11 @@ export default function Landing() {
         position: 'relative', zIndex: 4,
         borderTop: '1px solid rgba(246,241,228,0.10)',
         background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.25) 100%)',
-        display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
-        alignItems: 'center', padding: '28px 64px',
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)',
+        alignItems: 'center',
+        padding: isMobile ? '24px 20px' : '28px 64px',
+        gap: isMobile ? '20px 0' : 0,
       }}>
         {STATS.map((x, i) => (
           <motion.div
@@ -225,20 +247,25 @@ export default function Landing() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 + i * 0.08, duration: 0.4 }}
-            style={{ borderLeft: i ? '1px solid rgba(246,241,228,0.10)' : 'none', paddingLeft: i ? 36 : 0 }}
+            style={{
+              borderLeft: isMobile
+                ? (i % 2 === 0 ? 'none' : '1px solid rgba(246,241,228,0.10)')
+                : (i ? '1px solid rgba(246,241,228,0.10)' : 'none'),
+              paddingLeft: (isMobile ? i % 2 !== 0 : i) ? 24 : 0,
+            }}
           >
-            <div style={{ fontFamily: 'var(--f-display)', fontSize: 40, fontWeight: 700, color: 'var(--gr-cream)', letterSpacing: '-0.03em', lineHeight: 1 }}>{x.k}</div>
-            <div style={{ marginTop: 6, fontSize: 12, color: 'rgba(246,241,228,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{x.l}</div>
+            <div style={{ fontFamily: 'var(--f-display)', fontSize: isMobile ? 32 : 40, fontWeight: 700, color: 'var(--gr-cream)', letterSpacing: '-0.03em', lineHeight: 1 }}>{x.k}</div>
+            <div style={{ marginTop: 6, fontSize: 11, color: 'rgba(246,241,228,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{x.l}</div>
           </motion.div>
         ))}
       </div>
 
       {/* ── Help section ── */}
-      <div id="help" style={{ background: '#fff', padding: '64px 64px', borderTop: '1px solid var(--gr-line)' }}>
+      <div id="help" style={{ background: '#fff', padding: isMobile ? '40px 20px' : '64px 64px', borderTop: '1px solid var(--gr-line)' }}>
         <div style={{ maxWidth: 760, margin: '0 auto' }}>
-          <div style={{ fontFamily: 'var(--f-display)', fontSize: 28, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 8 }}>Help & FAQ</div>
-          <div style={{ fontSize: 14, color: 'var(--gr-stone-2)', marginBottom: 36 }}>Common questions about renting from George Rental.</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: isMobile ? 22 : 28, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 8 }}>Help & FAQ</div>
+          <div style={{ fontSize: 14, color: 'var(--gr-stone-2)', marginBottom: 32 }}>Common questions about renting from George Rental.</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[
               { q: 'How do I pay my rent?', a: 'Sign in to your tenant account, go to "Pay Rent", choose MTN MoMo or bank transfer, enter the transaction reference, and upload your proof of payment. Your landlord will confirm within 24 hours.' },
               { q: 'How do I get my receipt?', a: 'Once the owner confirms your payment, a receipt is automatically generated. You can view and download all your receipts from the "Receipts" tab after signing in.' },
@@ -246,7 +273,7 @@ export default function Landing() {
               { q: 'What payment methods are accepted?', a: 'MTN Mobile Money (primary), bank transfer via LBDI, Ecobank, or UBA, and cash payments accepted at the office.' },
               { q: 'How do I report a maintenance issue?', a: 'Sign in and go to the "Maintenance" tab. Submit a request with a description and priority level. The management team will follow up.' },
             ].map(({ q, a }) => (
-              <div key={q} style={{ padding: '20px 24px', borderRadius: 12, border: '1px solid var(--gr-line)', background: 'var(--gr-paper)' }}>
+              <div key={q} style={{ padding: isMobile ? '16px 18px' : '20px 24px', borderRadius: 12, border: '1px solid var(--gr-line)', background: 'var(--gr-paper)' }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 8 }}>{q}</div>
                 <div style={{ fontSize: 14, color: 'var(--gr-stone-2)', lineHeight: 1.6 }}>{a}</div>
               </div>
@@ -256,10 +283,15 @@ export default function Landing() {
       </div>
 
       {/* ── Contact section ── */}
-      <div id="contact" style={{ position: 'relative', zIndex: 1, background: 'var(--gr-midnight)', padding: '64px 64px', color: 'var(--gr-cream)' }}>
-        <div style={{ maxWidth: 760, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48 }}>
+      <div id="contact" style={{ position: 'relative', zIndex: 1, background: 'var(--gr-midnight)', padding: isMobile ? '40px 20px' : '64px 64px', color: 'var(--gr-cream)' }}>
+        <div style={{
+          maxWidth: 760, margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+          gap: isMobile ? 36 : 48,
+        }}>
           <div>
-            <div style={{ fontFamily: 'var(--f-display)', fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Contact Us</div>
+            <div style={{ fontFamily: 'var(--f-display)', fontSize: isMobile ? 22 : 28, fontWeight: 700, marginBottom: 8 }}>Contact Us</div>
             <div style={{ fontSize: 14, color: 'rgba(246,241,228,0.6)', marginBottom: 28, lineHeight: 1.6 }}>
               Have a question or need help with your account? Reach out to the George Rental team.
             </div>
@@ -271,7 +303,7 @@ export default function Landing() {
                 { label: 'Hours',   value: 'Mon–Sat 8:00 AM – 6:00 PM' },
               ].map(({ label, value }) => (
                 <div key={label} style={{ display: 'flex', gap: 16 }}>
-                  <div style={{ width: 64, fontSize: 11, color: 'rgba(246,241,228,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: 2, flexShrink: 0 }}>{label}</div>
+                  <div style={{ width: 56, fontSize: 11, color: 'rgba(246,241,228,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: 2, flexShrink: 0 }}>{label}</div>
                   <div style={{ fontSize: 14, color: 'rgba(246,241,228,0.85)' }}>{value}</div>
                 </div>
               ))}
@@ -298,7 +330,15 @@ export default function Landing() {
         </div>
 
         {/* Footer */}
-        <div style={{ maxWidth: 760, margin: '48px auto 0', paddingTop: 28, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{
+          maxWidth: 760, margin: '40px auto 0', paddingTop: 24,
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          justifyContent: 'space-between',
+          alignItems: isMobile ? 'flex-start' : 'center',
+          gap: 12,
+        }}>
           <div style={{ fontSize: 12, color: 'rgba(246,241,228,0.35)' }}>© 2026 George Rental. All rights reserved.</div>
           <div style={{ display: 'flex', gap: 20, fontSize: 12, color: 'rgba(246,241,228,0.35)' }}>
             <Link to="/stores" style={{ color: 'rgba(246,241,228,0.35)', textDecoration: 'none' }}>Stores</Link>

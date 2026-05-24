@@ -7,6 +7,7 @@ import { Store, Area } from '@/types'
 import GRLogo from '@/components/ui/GRLogo'
 import Pill from '@/components/ui/Pill'
 import { IconArrow, IconClose } from '@/components/ui/Icons'
+import { useWindowWidth } from '@/hooks/useWindowWidth'
 
 type StoreWithArea = Store & { area: Pick<Area, 'name'> | null }
 
@@ -156,6 +157,8 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
   const [message,   setMessage]   = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [err,       setErr]       = useState<string | null>(null)
+  const fw = useWindowWidth()
+  const formMobile = fw < 640
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -203,7 +206,7 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
         <input value={name} onChange={e => setName(e.target.value)} placeholder="Your name" style={inp} required />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: formMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
         <div>
           <label style={lbl}>Email <span style={{ fontWeight: 400, color: '#9E9893' }}>(optional)</span></label>
           <input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" type="email" style={inp} />
@@ -280,6 +283,8 @@ export default function StoreDetail() {
   const { data: store, isLoading } = useStore(id!)
   const [done, setDone]       = useState(false)
   const [hadEmail, setHadEmail] = useState(false)
+  const w = useWindowWidth()
+  const isMobile = w < 640
 
   const photos = (store?.photos?.length ? store.photos : store?.photo_url ? [store.photo_url] : []) as string[]
 
@@ -293,7 +298,7 @@ export default function StoreDetail() {
     <div style={{ minHeight: '100vh', background: 'var(--gr-paper)', fontFamily: 'var(--f-body)' }}>
       {/* Nav */}
       <header style={{
-        background: 'var(--gr-midnight)', padding: '0 48px', height: 68,
+        background: 'var(--gr-midnight)', padding: isMobile ? '0 20px' : '0 48px', height: 68,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         position: 'sticky', top: 0, zIndex: 50,
         borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -301,16 +306,16 @@ export default function StoreDetail() {
         <Link to="/" style={{ textDecoration: 'none' }}>
           <GRLogo size={20} />
         </Link>
-        <nav style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'rgba(246,241,228,0.65)', display: 'flex', alignItems: 'center', gap: 6 }}>
-            ← Back to stores
+        <nav style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <button type="button" onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'rgba(246,241,228,0.65)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            ← {isMobile ? 'Back' : 'Back to stores'}
           </button>
           <Link to="/sign-in" style={{
             height: 34, padding: '0 16px', background: 'var(--gr-crimson)', color: '#fff',
             borderRadius: 8, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center',
             textDecoration: 'none', gap: 6,
           }}>
-            Tenant sign in <IconArrow size={13} stroke="#fff" />
+            {isMobile ? 'Sign in' : 'Tenant sign in'} <IconArrow size={13} stroke="#fff" />
           </Link>
         </nav>
       </header>
@@ -333,7 +338,7 @@ export default function StoreDetail() {
           <PhotoGallery photos={photos} videoUrl={store.video_url} />
 
           {/* Content grid */}
-          <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px 60px', display: 'grid', gridTemplateColumns: '1fr 400px', gap: 32, alignItems: 'start' }}>
+          <div style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '24px 16px 48px' : '40px 24px 60px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 400px', gap: isMobile ? 24 : 32, alignItems: 'start' }}>
 
             {/* Left: store info + enquiry form */}
             <div>
@@ -378,7 +383,7 @@ export default function StoreDetail() {
               </div>
 
               {/* Enquiry section */}
-              <div style={{ background: '#fff', border: '1px solid var(--gr-line)', borderRadius: 16, padding: '28px 28px 28px' }}>
+              <div style={{ background: '#fff', border: '1px solid var(--gr-line)', borderRadius: 16, padding: isMobile ? '20px 16px' : '28px 28px' }}>
                 <AnimatePresence mode="wait">
                   {done ? (
                     <SuccessBanner key="success" hadEmail={hadEmail} onClose={() => setDone(false)} />

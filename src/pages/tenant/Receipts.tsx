@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Payment } from '@/types'
 import Pill from '@/components/ui/Pill'
 import { IconCheck, IconClock, IconAlert, IconFile, IconDownload } from '@/components/ui/Icons'
+import { periodRangeLabel } from './PayRent'
 
 function useReceipts(userId: string | undefined) {
   return useQuery<Payment[]>({
@@ -93,7 +94,7 @@ export default function Receipts() {
                   </div>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gr-ink)' }}>
-                      {r.period_month ? format(parseISO(r.period_month + '-01'), 'MMMM yyyy') : 'Payment'}
+                      {r.period_month ? periodRangeLabel(r.period_month, r.months_count ?? 1) : 'Payment'}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--gr-stone-2)', marginTop: 2 }}>
                       {methodLabel(r.method)} · {format(parseISO(r.created_at), 'dd MMM yyyy')}

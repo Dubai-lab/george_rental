@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, startOfMonth, subMonths } from 'date-fns'
@@ -13,6 +13,26 @@ export default function Dashboard() {
   const { profile } = useAuth()
   const { data: fxRate = 180 } = useFxRate()
   const qc = useQueryClient()
+  const [reminderLoading, setReminderLoading] = useState(false)
+  const [reminderResult, setReminderResult] = useState<string | null>(null)
+
+  async function sendReminders() {
+    setReminderLoading(true)
+    setReminderResult(null)
+    try {
+      const { data, error } = await supabase.functions.invoke('notify-rent-due', {
+        body: { days_ahead: 7 },
+      })
+      if (error) throw error
+      const sent = data?.sent ?? 0
+      setReminderResult(sent === 0 ? 'No tenants need reminders right now.' : `Sent ${sent} reminder${sent !== 1 ? 's' : ''}.`)
+    } catch {
+      setReminderResult('Failed to send reminders. Try again.')
+    } finally {
+      setReminderLoading(false)
+    }
+  }
+
   const greeting = (() => {
     const h = new Date().getHours()
     return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
@@ -95,13 +115,37 @@ export default function Dashboard() {
   return (
     <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Greeting */}
-      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <h1 style={{ fontFamily: 'var(--f-display)', fontSize: 34, letterSpacing: '-0.03em', fontWeight: 700, color: 'var(--gr-ink)', margin: 0 }}>
           {greeting}, {profile?.full_name?.split(' ')[0] ?? 'George'}.{' '}
           <span style={{ color: 'var(--gr-stone-2)', fontWeight: 500 }}>
             {stats?.overdueCount ? `${stats.overdueCount} store${stats.overdueCount > 1 ? 's' : ''} need${stats.overdueCount === 1 ? 's' : ''} your attention.` : 'Everything looks good.'}
           </span>
         </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          {reminderResult && (
+            <span style={{ fontSize: 13, color: reminderResult.includes('Failed') ? 'var(--gr-crimson)' : 'var(--gr-mint)', fontWeight: 500 }}>
+              {reminderResult}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={sendReminders}
+            disabled={reminderLoading}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '9px 16px', borderRadius: 10, border: '1px solid var(--gr-line)',
+              background: reminderLoading ? 'var(--gr-line)' : '#fff',
+              fontSize: 13, fontWeight: 600, color: 'var(--gr-ink)',
+              cursor: reminderLoading ? 'not-allowed' : 'pointer',
+              transition: 'background 0.15s',
+            }}
+          >
+            <span style={{ fontSize: 15 }}>📬</span>
+            {reminderLoading ? 'Sending…' : 'Send Reminders'}
+          </button>
+        </div>
       </motion.div>
 
       {/* KPI cards */}

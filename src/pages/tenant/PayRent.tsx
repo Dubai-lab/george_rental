@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
-import { format, subMonths } from 'date-fns'
+import { format, addMonths, subMonths, parseISO } from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFxRate, toLrd as toLrdFn } from '@/hooks/useFxRate'
@@ -50,11 +50,22 @@ function useTenantLease(userId: string | undefined) {
   })
 }
 
-const MONTHS = Array.from({ length: 4 }, (_, i) => {
-  const d   = subMonths(new Date(), i)
-  const key = format(d, 'yyyy-MM')
-  return { key, label: format(d, 'MMMM yyyy') }
-})
+// Current month + 1 ahead + 2 back
+const MONTHS = [
+  addMonths(new Date(), 1),
+  new Date(),
+  subMonths(new Date(), 1),
+  subMonths(new Date(), 2),
+].map(d => ({ key: format(d, 'yyyy-MM'), label: format(d, 'MMMM yyyy') }))
+
+const MONTH_PRESETS = [1, 2, 3, 6, 12]
+
+export function periodRangeLabel(startMonth: string, count: number): string {
+  if (count <= 1) return format(parseISO(startMonth + '-01'), 'MMMM yyyy')
+  const start = parseISO(startMonth + '-01')
+  const end   = addMonths(start, count - 1)
+  return `${format(start, 'MMM')} – ${format(end, 'MMM yyyy')} (${count} months)`
+}
 
 export default function PayRent() {
   const { profile } = useAuth()
@@ -63,25 +74,29 @@ export default function PayRent() {
   const { data: lease } = useTenantLease(profile?.id)
   const { data: paySettings } = usePaySettings()
 
-  const momoNumber = paySettings?.momo_number ?? '088 605 5575'
-  const momoName   = paySettings?.momo_name   ?? 'George Rental'
-  const bankList   = paySettings?.banks ?? []
+  const momoNumber  = paySettings?.momo_number ?? '088 605 5575'
+  const momoName    = paySettings?.momo_name   ?? 'George Rental'
+  const bankList    = paySettings?.banks ?? []
 
-  const [step, setStep]     = useState<1 | 2 | 3>(1)
-  const [method, setMethod] = useState<Method>('mtn_momo')
-  const [proofFile, setProofFile] = useState<File | null>(null)
-  const [done, setDone]     = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [step,        setStep]       = useState<1 | 2 | 3>(1)
+  const [method,      setMethod]     = useState<Method>('mtn_momo')
+  const [monthsCount, setMonthsCount] = useState(1)
+  const [proofFile,   setProofFile]  = useState<File | null>(null)
+  const [done,        setDone]       = useState(false)
+  const [copied,      setCopied]     = useState(false)
 
-  const { register, handleSubmit, watch, formState: { isSubmitting } } = useForm<FormValues>({
-    defaultValues: { period_month: MONTHS[0].key },
+  const { register, handleSubmit, watch } = useForm<FormValues>({
+    defaultValues: { period_month: MONTHS[1].key },
   })
+  const startMonth = watch('period_month')
+
+  const monthlyRent = lease?.monthly_rent_usd ?? 0
+  const totalUsd    = monthlyRent * monthsCount
+  const totalLrd    = toLrd(totalUsd)
 
   const submitMut = useMutation({
     mutationFn: async (values: FormValues) => {
       if (!lease || !profile) throw new Error('No active lease')
-      const amountUsd = lease.monthly_rent_usd
-      const amountLrd = toLrd(amountUsd)
 
       let proofUrl: string | null = null
       if (proofFile) {
@@ -97,18 +112,18 @@ export default function PayRent() {
         lease_id:        lease.id,
         tenant_id:       profile.id,
         store_id:        lease.store_id,
-        amount_usd:      amountUsd,
-        amount_lrd:      amountLrd,
+        amount_usd:      totalUsd,
+        amount_lrd:      totalLrd,
         fx_rate:         fxRate,
         method,
         period_month:    values.period_month,
+        months_count:    monthsCount,
         transaction_ref: values.transaction_ref || null,
         proof_url:       proofUrl,
         notes:           values.notes || null,
         status:          'pending',
       }).select('id').single()
       if (error) throw error
-      // Notify owner of new payment — non-blocking
       if (inserted?.id) {
         supabase.functions.invoke('notify-payment', { body: { payment_id: inserted.id, action: 'submitted' } }).catch(() => {})
       }
@@ -121,6 +136,8 @@ export default function PayRent() {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  function reset() { setDone(false); setStep(1); setProofFile(null); setMonthsCount(1) }
 
   if (!lease) return (
     <div style={{ padding: 24, textAlign: 'center', paddingTop: 60 }}>
@@ -145,14 +162,9 @@ export default function PayRent() {
       <div style={{ fontSize: 14, color: 'var(--gr-stone-2)', marginTop: 8, lineHeight: 1.6 }}>
         Your payment is pending review.<br />You'll be notified once it's confirmed.
       </div>
-      <Btn kind="crimson" style={{ marginTop: 28 }} onClick={() => { setDone(false); setStep(1); setProofFile(null) }}>
-        Submit another
-      </Btn>
+      <Btn kind="crimson" style={{ marginTop: 28 }} onClick={reset}>Submit another</Btn>
     </div>
   )
-
-  const amountUsd = lease.monthly_rent_usd
-  const amountLrd = toLrd(amountUsd)
 
   return (
     <div style={{ padding: '20px 20px 40px' }}>
@@ -161,23 +173,23 @@ export default function PayRent() {
         {(['Method', 'Proof', 'Confirm'] as const).map((label, i) => {
           const s = (i + 1) as 1 | 2 | 3
           const active = step === s
-          const done   = step > s
+          const isDone = step > s
           return (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, flex: i < 2 ? 1 : undefined }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{
                   width: 24, height: 24, borderRadius: 99,
-                  background: done ? 'var(--gr-mint)' : active ? 'var(--gr-crimson)' : 'var(--gr-line)',
+                  background: isDone ? 'var(--gr-mint)' : active ? 'var(--gr-crimson)' : 'var(--gr-line)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  {done
+                  {isDone
                     ? <IconCheck size={12} stroke="#fff" />
                     : <span style={{ fontSize: 11, fontWeight: 700, color: active ? '#fff' : 'var(--gr-stone-2)' }}>{s}</span>
                   }
                 </div>
                 <span style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? 'var(--gr-ink)' : 'var(--gr-stone-2)' }}>{label}</span>
               </div>
-              {i < 2 && <div style={{ flex: 1, height: 1, background: done ? 'var(--gr-mint)' : 'var(--gr-line)' }} />}
+              {i < 2 && <div style={{ flex: 1, height: 1, background: isDone ? 'var(--gr-mint)' : 'var(--gr-line)' }} />}
             </div>
           )
         })}
@@ -186,24 +198,59 @@ export default function PayRent() {
       {/* Amount card */}
       <div style={{
         background: 'var(--gr-midnight)', borderRadius: 16, padding: '20px 22px', marginBottom: 24,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
-        <div>
-          <div style={{ fontSize: 11, color: 'rgba(246,241,228,0.5)', marginBottom: 4 }}>{lease.store.name} · {format(new Date(), 'MMMM yyyy')}</div>
-          <div style={{ fontFamily: 'var(--f-display)', fontSize: 28, fontWeight: 700, color: '#fff' }}>${amountUsd.toLocaleString()}</div>
-          <div style={{ fontSize: 12, color: 'rgba(246,241,228,0.45)', marginTop: 2 }}>L${amountLrd.toLocaleString()}</div>
+        <div style={{ fontSize: 11, color: 'rgba(246,241,228,0.5)', marginBottom: 6 }}>
+          {lease.store.name} · {periodRangeLabel(startMonth, monthsCount)}
         </div>
+        <div style={{ fontFamily: 'var(--f-display)', fontSize: 30, fontWeight: 700, color: '#fff' }}>
+          ${totalUsd.toLocaleString()}
+        </div>
+        {monthsCount > 1 && (
+          <div style={{ fontSize: 12, color: 'rgba(246,241,228,0.55)', marginTop: 3 }}>
+            {monthsCount} × ${monthlyRent.toLocaleString()}/mo
+          </div>
+        )}
+        <div style={{ fontSize: 12, color: 'rgba(246,241,228,0.4)', marginTop: 2 }}>L${totalLrd.toLocaleString()}</div>
       </div>
 
       <AnimatePresence mode="wait">
-        {/* Step 1 — Method */}
+        {/* Step 1 — Method + Months */}
         {step === 1 && (
           <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 14 }}>Choose payment method</div>
+
+            {/* Months selector */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 12 }}>How many months?</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {MONTH_PRESETS.map(n => (
+                  <button
+                    type="button"
+                    key={n}
+                    onClick={() => setMonthsCount(n)}
+                    style={{
+                      flex: 1, height: 44, borderRadius: 10, border: `2px solid ${monthsCount === n ? 'var(--gr-crimson)' : 'var(--gr-line)'}`,
+                      background: monthsCount === n ? 'rgba(209,31,44,0.06)' : '#fff',
+                      color: monthsCount === n ? 'var(--gr-crimson)' : 'var(--gr-stone)',
+                      fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                  >
+                    {n === 1 ? '1 mo' : n === 12 ? '1 yr' : `${n} mo`}
+                  </button>
+                ))}
+              </div>
+              {monthsCount >= 3 && (
+                <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(47,184,117,0.08)', borderRadius: 8, fontSize: 12, color: 'var(--gr-mint)', fontWeight: 500 }}>
+                  ✓ Paying {monthsCount} months upfront — no reminders until {format(addMonths(parseISO(startMonth + '-01'), monthsCount), 'MMMM yyyy')}
+                </div>
+              )}
+            </div>
+
+            {/* Method selector */}
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 12 }}>Payment method</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
               {([
-                { id: 'mtn_momo', label: 'MTN Mobile Money', sub: 'Instant — most popular', badge: 'MTN', badgeColor: '#FFC107' },
-                { id: 'bank_transfer', label: 'Bank Transfer', sub: 'LBDI · Ecobank · UBA', badge: 'BANK', badgeColor: 'var(--gr-navy)' },
+                { id: 'mtn_momo',      label: 'MTN Mobile Money', sub: 'Instant — most popular', badge: 'MTN', badgeColor: '#FFC107' },
+                { id: 'bank_transfer', label: 'Bank Transfer',     sub: 'LBDI · Ecobank · UBA',  badge: 'BANK', badgeColor: 'var(--gr-navy)' },
               ] as { id: Method; label: string; sub: string; badge: string; badgeColor: string }[]).map(m => (
                 <label key={m.id} style={{
                   display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
@@ -215,7 +262,7 @@ export default function PayRent() {
                   <div style={{
                     width: 40, height: 40, borderRadius: 10, background: m.badgeColor + '22',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: m.badge.startsWith('💵') ? 20 : 10, fontWeight: 800, color: m.badgeColor, letterSpacing: '-0.03em',
+                    fontSize: 10, fontWeight: 800, color: m.badgeColor, letterSpacing: '-0.03em',
                   }}>{m.badge}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--gr-ink)' }}>{m.label}</div>
@@ -261,7 +308,7 @@ export default function PayRent() {
                   </button>
                 </div>
                 <div style={{ marginTop: 12, padding: '10px 12px', background: 'rgba(255,193,7,0.1)', borderRadius: 8, fontSize: 12, color: 'var(--gr-stone-2)', lineHeight: 1.5 }}>
-                  Send <strong style={{ color: 'var(--gr-ink)' }}>L${amountLrd.toLocaleString()}</strong> and enter the transaction ID below.
+                  Send <strong style={{ color: 'var(--gr-ink)' }}>L${totalLrd.toLocaleString()}</strong> and enter the transaction ID below.
                 </div>
               </div>
             )}
@@ -283,10 +330,10 @@ export default function PayRent() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(v => { setStep(3) })} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Period */}
+            <form onSubmit={handleSubmit(() => setStep(3))} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Start month */}
               <div>
-                <label style={labelStyle}>Payment period</label>
+                <label style={labelStyle}>Starting month</label>
                 <select {...register('period_month')} style={inputStyle}>
                   {MONTHS.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
                 </select>
@@ -339,14 +386,15 @@ export default function PayRent() {
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 16 }}>Confirm your payment</div>
             <div style={{ background: 'var(--gr-paper)', borderRadius: 14, padding: '18px 20px', marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
-                { label: 'Amount (USD)', value: `$${amountUsd.toLocaleString()}` },
-                { label: 'Amount (LRD)', value: `L$${amountLrd.toLocaleString()}` },
-                { label: 'Method', value: method === 'mtn_momo' ? 'MTN Mobile Money' : 'Bank Transfer' },
-                { label: 'Proof', value: proofFile ? proofFile.name : 'None uploaded' },
+                { label: 'Period',       value: periodRangeLabel(startMonth, monthsCount) },
+                { label: 'Amount (USD)', value: `$${totalUsd.toLocaleString()}${monthsCount > 1 ? ` (${monthsCount} × $${monthlyRent.toLocaleString()})` : ''}` },
+                { label: 'Amount (LRD)', value: `L$${totalLrd.toLocaleString()}` },
+                { label: 'Method',       value: method === 'mtn_momo' ? 'MTN Mobile Money' : 'Bank Transfer' },
+                { label: 'Proof',        value: proofFile ? proofFile.name : 'None uploaded' },
               ].map(r => (
                 <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <div style={{ fontSize: 13, color: 'var(--gr-stone-2)' }}>{r.label}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gr-ink)' }}>{r.value}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gr-ink)', maxWidth: '55%', textAlign: 'right' }}>{r.value}</div>
                 </div>
               ))}
             </div>

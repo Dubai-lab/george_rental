@@ -67,6 +67,7 @@ export interface Payment {
   fx_rate:         number
   method:          PaymentMethod
   period_month:    string
+  months_count:    number
   transaction_ref: string | null
   proof_url:       string | null
   status:          PaymentStatus

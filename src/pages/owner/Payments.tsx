@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, addMonths } from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Payment, Lease, Store, Profile } from '@/types'
@@ -42,6 +42,22 @@ function methodLabel(m: string) {
   if (m === 'mtn_momo') return 'MTN MoMo'
   if (m === 'bank_transfer') return 'Bank Transfer'
   return 'Cash'
+}
+
+function periodLabel(startMonth: string, count: number): string {
+  if (!startMonth) return '—'
+  const start = parseISO(startMonth + '-01')
+  if (count <= 1) return format(start, 'MMM yy')
+  const end = addMonths(start, count - 1)
+  return `${format(start, 'MMM')}–${format(end, 'MMM yy')}`
+}
+
+function periodLabelFull(startMonth: string, count: number): string {
+  if (!startMonth) return '—'
+  const start = parseISO(startMonth + '-01')
+  if (count <= 1) return format(start, 'MMMM yyyy')
+  const end = addMonths(start, count - 1)
+  return `${format(start, 'MMM')} – ${format(end, 'MMM yyyy')} (${count} months)`
 }
 
 function statusTone(s: string): any {
@@ -203,7 +219,7 @@ export default function Payments() {
             </div>
             <div style={{ fontSize: 13, color: 'var(--gr-stone-2)' }}>{methodLabel(p.method)}</div>
             <div style={{ fontSize: 12, color: 'var(--gr-stone-2)', fontFamily: 'var(--f-mono)' }}>
-              {p.period_month ? format(parseISO(p.period_month + '-01'), 'MMM yy') : '—'}
+              {p.period_month ? periodLabel(p.period_month, (p as any).months_count ?? 1) : '—'}
             </div>
             <div><Pill tone={statusTone(p.status)}>{p.status.charAt(0).toUpperCase() + p.status.slice(1)}</Pill></div>
             <div style={{ textAlign: 'right', fontSize: 13, color: 'var(--gr-crimson)', fontWeight: 500 }}>
@@ -260,7 +276,7 @@ export default function Payments() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <DrawerRow label="Tenant" value={selected.tenant?.full_name ?? '—'} />
                   <DrawerRow label="Store" value={`${selected.lease?.store?.code} · ${selected.lease?.store?.name}`} />
-                  <DrawerRow label="Period" value={selected.period_month ? format(parseISO(selected.period_month + '-01'), 'MMMM yyyy') : '—'} />
+                  <DrawerRow label="Period" value={selected.period_month ? periodLabelFull(selected.period_month, (selected as any).months_count ?? 1) : '—'} />
                   <DrawerRow label="Method" value={methodLabel(selected.method)} />
                   <DrawerRow label="Transaction Ref" value={selected.transaction_ref ?? 'Not provided'} mono />
                   <DrawerRow label="Submitted" value={format(parseISO(selected.created_at), 'dd MMM yyyy, HH:mm')} />

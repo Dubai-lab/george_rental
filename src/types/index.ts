@@ -52,6 +52,7 @@ export interface Lease {
   start_date:       string
   end_date:         string | null
   status:           LeaseStatus
+  agreement_url:    string | null
   created_at:       string
   tenant?:          Profile
   store?:           Store

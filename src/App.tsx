@@ -22,6 +22,7 @@ const Maintenance = lazy(() => import('@/pages/owner/Maintenance'))
 const MapView     = lazy(() => import('@/pages/owner/Map'))
 const Enquiries   = lazy(() => import('@/pages/owner/Enquiries'))
 const Settings    = lazy(() => import('@/pages/owner/Settings'))
+const Agreement   = lazy(() => import('@/pages/owner/Agreement'))
 
 const TenantHome        = lazy(() => import('@/pages/tenant/TenantHome'))
 const PayRent           = lazy(() => import('@/pages/tenant/PayRent'))
@@ -73,6 +74,9 @@ export default function App() {
         <Route path="/stores"          element={<PublicStores />} />
         <Route path="/stores/:id"      element={<StoreDetail />} />
         <Route path="/accept-invite"   element={<AcceptInvite />} />
+
+        {/* Owner — standalone printable pages (no sidebar layout) */}
+        <Route path="/owner/agreement/:leaseId" element={<OwnerRoute><Agreement /></OwnerRoute>} />
 
         {/* Owner */}
         <Route element={<OwnerRoute><DashboardLayout /></OwnerRoute>}>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
@@ -11,6 +11,18 @@ import InviteTenantModal from '@/components/modals/InviteTenantModal'
 
 type TenantRow = Profile & {
   lease: (Lease & { store: Pick<Store, 'code' | 'name' | 'address'> }) | null
+}
+
+async function uploadAgreement(leaseId: string, file: File): Promise<string> {
+  const ext  = file.name.split('.').pop() ?? 'pdf'
+  const path = `${leaseId}/agreement_${Date.now()}.${ext}`
+  const { error: upErr } = await supabase.storage.from('lease-agreements').upload(path, file, { upsert: true })
+  if (upErr) throw upErr
+  const { data } = supabase.storage.from('lease-agreements').getPublicUrl(path)
+  const url = data.publicUrl
+  const { error: dbErr } = await supabase.from('leases').update({ agreement_url: url }).eq('id', leaseId)
+  if (dbErr) throw dbErr
+  return url
 }
 
 function useTenants() {
@@ -60,6 +72,33 @@ export default function Tenants() {
   const [assigning, setAssigning] = useState(false)
   const [assignErr, setAssignErr] = useState('')
   const [assignForm, setAssignForm] = useState<AssignForm>({ store_id: '', business_name: '', business_type: '', start_date: new Date().toISOString().slice(0, 10) })
+  const [uploading, setUploading]       = useState(false)
+  const [uploadErr, setUploadErr]       = useState('')
+  const [agreementUrl, setAgreementUrl] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function openDrawer(t: TenantRow) {
+    setSelected(t)
+    setAgreementUrl(t.lease?.agreement_url ?? null)
+    setUploadErr('')
+  }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !selected?.lease) return
+    setUploading(true)
+    setUploadErr('')
+    try {
+      const url = await uploadAgreement(selected.lease.id, file)
+      setAgreementUrl(url)
+      qc.invalidateQueries({ queryKey: ['tenants'] })
+    } catch (err: any) {
+      setUploadErr(err.message ?? 'Upload failed')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   const { data: vacantStores = [] } = useVacantStores()
 
@@ -164,7 +203,7 @@ export default function Tenants() {
               padding: '14px 20px', borderBottom: i < filtered.length - 1 ? '1px solid var(--gr-line)' : 'none',
               alignItems: 'center', cursor: 'pointer',
             }}
-            onClick={() => setSelected(t)}
+            onClick={() => openDrawer(t)}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <Avatar name={t.full_name} size={36} />
@@ -307,6 +346,49 @@ export default function Tenants() {
                           </button>
                         </div>
                       </div>
+                    )}
+                  </Section>
+                )}
+
+                {/* Agreement — only when an active lease exists */}
+                {selected.lease && (
+                  <Section title="Rental Agreement">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      style={{ display: 'none' }}
+                      onChange={handleUpload}
+                    />
+                    {uploadErr && (
+                      <div style={{ fontSize: 12, color: 'var(--gr-crimson)', padding: '8px 12px', background: 'rgba(209,31,44,0.06)', borderRadius: 8, marginBottom: 8 }}>{uploadErr}</div>
+                    )}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => window.open(`/owner/agreement/${selected.lease!.id}`, '_blank')}
+                        style={{ flex: 1, height: 38, borderRadius: 8, background: 'var(--gr-midnight)', color: '#F6F1E4', border: 'none', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}
+                      >
+                        Generate Agreement
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        style={{ flex: 1, height: 38, borderRadius: 8, background: 'rgba(11,26,61,0.06)', border: '1px solid var(--gr-line)', fontWeight: 600, fontSize: 12, cursor: 'pointer', opacity: uploading ? 0.6 : 1 }}
+                      >
+                        {uploading ? 'Uploading…' : 'Upload Signed Copy'}
+                      </button>
+                    </div>
+                    {agreementUrl && (
+                      <a
+                        href={agreementUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'block', marginTop: 10, fontSize: 12, color: 'var(--gr-crimson)', fontWeight: 600, textDecoration: 'underline' }}
+                      >
+                        View uploaded agreement →
+                      </a>
                     )}
                   </Section>
                 )}

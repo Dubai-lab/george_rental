@@ -186,6 +186,18 @@ export default function TenantProfile() {
                 </div>
               </div>
             )}
+            {lease.agreement_url && (
+              <div style={{ padding: '12px 18px', borderTop: '1px solid var(--gr-line)' }}>
+                <a
+                  href={lease.agreement_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: 13, fontWeight: 600, color: 'var(--gr-crimson)', textDecoration: 'underline' }}
+                >
+                  View Rental Agreement →
+                </a>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -28,7 +28,7 @@ function useLease(userId: string | undefined) {
 }
 
 export default function TenantProfile() {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, refreshProfile } = useAuth()
   const { data: lease } = useLease(profile?.id)
 
   const [editingPhone, setEditingPhone] = useState(false)
@@ -44,7 +44,7 @@ export default function TenantProfile() {
         .eq('id', profile!.id)
       if (error) throw error
     },
-    onSuccess: () => setEditingPhone(false),
+    onSuccess: async () => { await refreshProfile(); setEditingPhone(false) },
     onError: (e: any) => setPhoneErr(e.message ?? 'Update failed'),
   })
 

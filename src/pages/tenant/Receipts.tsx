@@ -133,20 +133,12 @@ export default function Receipts() {
                     </div>
                   </div>
                   {r.proof_url && (
-                    <a
-                      href={r.proof_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '7px 12px', borderRadius: 8, border: '1px solid var(--gr-line)',
-                        background: '#fff', textDecoration: 'none',
-                        fontSize: 12, color: 'var(--gr-stone-2)', fontWeight: 500,
-                      }}
-                    >
-                      <IconDownload size={13} />
-                      Proof
-                    </a>
+                    <img
+                      src={r.proof_url}
+                      alt="Payment proof"
+                      style={{ width: '100%', borderRadius: 8, border: '1px solid var(--gr-line)', display: 'block', marginTop: 8, cursor: 'zoom-in' }}
+                      onClick={() => window.open(r.proof_url!, '_blank')}
+                    />
                   )}
                 </div>
               )}

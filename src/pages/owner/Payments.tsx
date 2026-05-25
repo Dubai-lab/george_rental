@@ -289,18 +289,12 @@ export default function Payments() {
                 {selected.proof_url && (
                   <div style={{ marginTop: 24 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gr-stone-2)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Payment Proof</div>
-                    <a href={selected.proof_url} target="_blank" rel="noopener noreferrer"
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
-                        borderRadius: 10, border: '1px solid var(--gr-line)', textDecoration: 'none',
-                        color: 'var(--gr-ink)', fontSize: 13, fontWeight: 500,
-                        transition: 'background 0.15s',
-                      }}
-                    >
-                      <IconFile size={16} style={{ color: 'var(--gr-crimson)' }} />
-                      View uploaded proof
-                      <IconDownload size={14} style={{ marginLeft: 'auto', color: 'var(--gr-stone-2)' }} />
-                    </a>
+                    <img
+                      src={selected.proof_url}
+                      alt="Payment proof"
+                      style={{ width: '100%', borderRadius: 10, border: '1px solid var(--gr-line)', display: 'block', cursor: 'zoom-in' }}
+                      onClick={() => window.open(selected.proof_url!, '_blank')}
+                    />
                   </div>
                 )}
 

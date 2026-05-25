@@ -411,12 +411,42 @@ export default function Landing() {
           gap: 12,
         }}>
           <div style={{ fontSize: 12, color: 'rgba(246,241,228,0.35)' }}>© 2026 George Rental. All rights reserved.</div>
-          <div style={{ display: 'flex', gap: 20, fontSize: 12, color: 'rgba(246,241,228,0.35)' }}>
+          <div style={{ display: 'flex', gap: 20, fontSize: 12, color: 'rgba(246,241,228,0.35)', alignItems: 'center' }}>
             <Link to="/stores" style={{ color: 'rgba(246,241,228,0.35)', textDecoration: 'none' }}>Stores</Link>
             <a href="#help" style={{ color: 'rgba(246,241,228,0.35)', textDecoration: 'none' }}>Help</a>
+            <ComingSoonBadge label="Get Android App" />
+            <ComingSoonBadge label="Get iOS App" />
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function ComingSoonBadge({ label }: { label: string }) {
+  const [show, setShow] = useState(false)
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex' }}>
+      <button
+        onClick={() => { setShow(true); setTimeout(() => setShow(false), 2000) }}
+        type="button"
+        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+          color: 'rgba(246,241,228,0.35)', fontSize: 12, fontFamily: 'inherit' }}
+      >
+        {label}
+      </button>
+      <AnimatePresence>
+        {show && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            style={{ position: 'absolute', bottom: '120%', left: '50%', transform: 'translateX(-50%)',
+              background: '#1a2340', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6,
+              padding: '4px 10px', fontSize: 11, color: 'rgba(246,241,228,0.8)', whiteSpace: 'nowrap' }}
+          >
+            Coming soon
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

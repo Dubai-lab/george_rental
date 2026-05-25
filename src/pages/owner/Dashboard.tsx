@@ -56,7 +56,7 @@ export default function Dashboard() {
   const { data: stats } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd')
+      const monthStart = format(startOfMonth(new Date()), 'yyyy-MM')
       const [{ data: confirmed }, { data: leases }, { data: stores }, { data: overdue }] = await Promise.all([
         supabase.from('payments').select('amount_usd, amount_lrd').eq('status', 'confirmed').eq('period_month', monthStart),
         supabase.from('leases').select('monthly_rent_usd').eq('status', 'active'),
@@ -80,7 +80,7 @@ export default function Dashboard() {
     queryFn: async () => {
       const months = Array.from({ length: 6 }, (_, i) => subMonths(new Date(), 5 - i))
       const results = await Promise.all(months.map(async m => {
-        const start = format(startOfMonth(m), 'yyyy-MM-dd')
+        const start = format(startOfMonth(m), 'yyyy-MM')
         const [{ data: col }, { data: lea }] = await Promise.all([
           supabase.from('payments').select('amount_usd').eq('status', 'confirmed').eq('period_month', start),
           supabase.from('leases').select('monthly_rent_usd').eq('status', 'active'),
@@ -102,10 +102,10 @@ export default function Dashboard() {
     queryFn: async () => {
       const { data } = await supabase
         .from('payments')
-        .select('*, tenant:profiles(full_name), store:stores(name)')
+        .select('*, tenant:profiles(full_name), lease:leases(store:stores(name))')
         .order('created_at', { ascending: false })
         .limit(6)
-      return (data ?? []) as (Payment & { tenant: { full_name: string }; store: { name: string } })[]
+      return (data ?? []) as (Payment & { tenant: { full_name: string }; lease: { store: { name: string } } })[]
     },
     staleTime: 30_000,
   })
@@ -177,13 +177,14 @@ export default function Dashboard() {
             )}
             {activity.map((r, i) => {
               const statusTone = r.status === 'confirmed' ? 'mint' : r.status === 'rejected' ? 'rust' : 'gold'
-              const methodLabel = r.method === 'mtn_momo' ? 'MTN MoMo' : r.method === 'bank_transfer' ? 'Bank transfer' : 'Cash'
+              const methodLabel = r.method === 'mtn_momo' ? 'MTN MoMo' : r.method === 'orange_money' ? 'Orange Money' : r.method === 'bank_transfer' ? 'Bank transfer' : 'Cash'
+              const storeName = (r.lease as any)?.store?.name
               return (
                 <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', borderBottom: i < activity.length - 1 ? '1px solid var(--gr-line-2)' : 'none' }}>
                   <Avatar name={r.tenant?.full_name ?? '?'} size={34} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gr-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.tenant?.full_name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--gr-stone-2)', marginTop: 2 }}>{methodLabel} · {r.store?.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--gr-stone-2)', marginTop: 2 }}>{methodLabel}{storeName ? ` · ${storeName}` : ''}</div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--gr-ink)' }}>${r.amount_usd.toLocaleString()}</div>

@@ -69,7 +69,8 @@ export default function Dashboard() {
       const totalStores   = stores?.length ?? 0
       const occupiedStores = stores?.filter(s => s.status === 'occupied').length ?? 0
       const overdueAmt    = overdue?.reduce((s, p) => s + p.amount_usd, 0) ?? 0
-      return { collectedUsd, collectedLrd, expectedUsd, totalStores, occupiedStores, overdueCount: overdue?.length ?? 0, overdueAmountUsd: overdueAmt }
+      const activeLeases  = leases?.length ?? 0
+      return { collectedUsd, collectedLrd, expectedUsd, totalStores, occupiedStores, overdueCount: overdue?.length ?? 0, overdueAmountUsd: overdueAmt, activeLeases }
     },
     staleTime: 30_000,
   })
@@ -159,7 +160,7 @@ export default function Dashboard() {
         <KpiCard tone="cream" label="Overdue" big={String(stats?.overdueCount ?? 0)}
           deltaTone="rust" sub={`$${(stats?.overdueAmountUsd ?? 0).toLocaleString()} · L$${(((stats?.overdueAmountUsd ?? 0) * fxRate)).toLocaleString()}`} />
         <KpiCard tone="crimson" label="Receivable · next month" usd={stats?.expectedUsd}
-          sub={`due in ${30 - new Date().getDate()} days`} />
+          sub={`${stats?.activeLeases ?? 0} active lease${(stats?.activeLeases ?? 0) !== 1 ? 's' : ''} · ${format(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1), 'MMMM yyyy')}`} />
       </div>
 
       {/* Two panels */}

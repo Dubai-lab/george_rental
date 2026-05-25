@@ -1,5 +1,5 @@
 export type UserRole        = 'owner' | 'tenant'
-export type PaymentMethod  = 'mtn_momo' | 'bank_transfer' | 'cash'
+export type PaymentMethod  = 'mtn_momo' | 'orange_money' | 'bank_transfer' | 'cash'
 export type PaymentStatus  = 'pending' | 'confirmed' | 'rejected'
 export type LeaseStatus    = 'active' | 'ended'
 export type StoreStatus    = 'occupied' | 'vacant'

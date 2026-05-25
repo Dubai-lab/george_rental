@@ -414,6 +414,7 @@ export default function Landing() {
           <div style={{ display: 'flex', gap: 20, fontSize: 12, color: 'rgba(246,241,228,0.35)', alignItems: 'center' }}>
             <Link to="/stores" style={{ color: 'rgba(246,241,228,0.35)', textDecoration: 'none' }}>Stores</Link>
             <a href="#help" style={{ color: 'rgba(246,241,228,0.35)', textDecoration: 'none' }}>Help</a>
+            <Link to="/privacy" style={{ color: 'rgba(246,241,228,0.35)', textDecoration: 'none' }}>Privacy Policy</Link>
             <ComingSoonBadge label="Get Android App" icon="android" />
             <ComingSoonBadge label="Get iOS App" icon="apple" />
           </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
@@ -224,6 +225,12 @@ export default function TenantProfile() {
         <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--gr-stone-2)', marginTop: 18, lineHeight: 1.6 }}>
           George Rental · {profile.email}<br />
           +231 88 605 5575 · eg8217178@gmail.com
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: 14 }}>
+          <Link to="/privacy" style={{ fontSize: 11, color: 'var(--gr-stone-2)', textDecoration: 'none', borderBottom: '1px solid var(--gr-line)' }}>
+            Privacy Policy &amp; Terms of Service
+          </Link>
         </div>
       </div>
     </div>

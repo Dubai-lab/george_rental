@@ -12,6 +12,7 @@ const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'))
 const ResetPassword  = lazy(() => import('@/pages/ResetPassword'))
 const PublicStores   = lazy(() => import('@/pages/PublicStores'))
 const StoreDetail    = lazy(() => import('@/pages/StoreDetail'))
+const PrivacyPolicy  = lazy(() => import('@/pages/PrivacyPolicy'))
 
 const Dashboard   = lazy(() => import('@/pages/owner/Dashboard'))
 const Stores      = lazy(() => import('@/pages/owner/Stores'))
@@ -74,6 +75,7 @@ export default function App() {
         <Route path="/stores"          element={<PublicStores />} />
         <Route path="/stores/:id"      element={<StoreDetail />} />
         <Route path="/accept-invite"   element={<AcceptInvite />} />
+        <Route path="/privacy"         element={<PrivacyPolicy />} />
 
         {/* Owner — standalone printable pages (no sidebar layout) */}
         <Route path="/owner/agreement/:leaseId" element={<OwnerRoute><Agreement /></OwnerRoute>} />

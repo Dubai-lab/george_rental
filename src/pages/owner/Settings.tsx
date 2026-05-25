@@ -5,7 +5,7 @@ import Btn from '@/components/ui/Btn'
 import { IconClose } from '@/components/ui/Icons'
 
 interface BankAccount { bank: string; account: string; name: string }
-interface PaySettings { id: string; momo_number: string; momo_name: string; banks: BankAccount[]; updated_at: string }
+interface PaySettings { id: string; momo_number: string; momo_name: string; orange_number: string; orange_name: string; banks: BankAccount[]; updated_at: string }
 
 function usePaySettings() {
   return useQuery<PaySettings | null>({
@@ -27,6 +27,11 @@ export default function OwnerSettings() {
   const [momoName, setMomoName] = useState('')
   const [momoErr,  setMomoErr]  = useState('')
 
+  const [orangeEdit,    setOrangeEdit]    = useState(false)
+  const [orangeNum,     setOrangeNum]     = useState('')
+  const [orangeAccName, setOrangeAccName] = useState('')
+  const [orangeErr,     setOrangeErr]     = useState('')
+
   const [banksEdit, setBanksEdit] = useState(false)
   const [banks, setBanks]         = useState<BankAccount[]>([])
   const [newBank, setNewBank]     = useState({ bank: '', account: '', name: '' })
@@ -43,6 +48,19 @@ export default function OwnerSettings() {
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['payment-settings'] }); setMomoEdit(false); setMomoErr('') },
     onError:   (e: any) => setMomoErr(e.message ?? 'Save failed'),
+  })
+
+  const saveOrange = useMutation({
+    mutationFn: async () => {
+      if (!cfg) return
+      const { error } = await supabase
+        .from('payment_settings')
+        .update({ orange_number: orangeNum.trim(), orange_name: orangeAccName.trim(), updated_at: new Date().toISOString() })
+        .eq('id', cfg.id)
+      if (error) throw error
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['payment-settings'] }); setOrangeEdit(false); setOrangeErr('') },
+    onError:   (e: any) => setOrangeErr(e.message ?? 'Save failed'),
   })
 
   const saveBanks = useMutation({
@@ -131,6 +149,54 @@ export default function OwnerSettings() {
             <div>
               <div style={metaLabel}>Account Name</div>
               <div style={metaValue}>{cfg.momo_name || '—'}</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Orange Money */}
+      <div style={section}>
+        <div style={sectionHead}>
+          <div>
+            <div style={sectionTitle}>Orange Money</div>
+            <div style={sectionSub}>Tenants transfer rent to this Orange Money number</div>
+          </div>
+          {!orangeEdit && (
+            <button style={actionBtn} onClick={() => {
+              setOrangeNum(cfg.orange_number ?? '')
+              setOrangeAccName(cfg.orange_name ?? '')
+              setOrangeEdit(true)
+            }}>Edit</button>
+          )}
+        </div>
+
+        {orangeEdit ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {orangeErr && <div style={errBox}>{orangeErr}</div>}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div>
+                <label style={lbl}>Orange Number</label>
+                <input value={orangeNum} onChange={e => setOrangeNum(e.target.value)} placeholder="077 000 0000" style={inp} />
+              </div>
+              <div>
+                <label style={lbl}>Account Name</label>
+                <input value={orangeAccName} onChange={e => setOrangeAccName(e.target.value)} placeholder="George Rental" style={inp} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Btn kind="ghost" onClick={() => { setOrangeEdit(false); setOrangeErr('') }}>Cancel</Btn>
+              <Btn kind="crimson" loading={saveOrange.isPending} onClick={() => saveOrange.mutate()}>Save changes</Btn>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            <div>
+              <div style={metaLabel}>Orange Number</div>
+              <div style={metaValue}>{cfg.orange_number || '—'}</div>
+            </div>
+            <div>
+              <div style={metaLabel}>Account Name</div>
+              <div style={metaValue}>{cfg.orange_name || '—'}</div>
             </div>
           </div>
         )}

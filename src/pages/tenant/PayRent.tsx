@@ -12,9 +12,9 @@ import { IconCheck, IconUpload, IconCopy } from '@/components/ui/Icons'
 
 type TenantLease = Lease & { store: Store }
 type FormValues  = { period_month: string; transaction_ref: string; notes: string }
-type Method      = 'mtn_momo' | 'bank_transfer'
+type Method      = 'mtn_momo' | 'orange_money' | 'bank_transfer'
 interface BankAccount { bank: string; account: string; name: string }
-interface PaySettings { momo_number: string; momo_name: string; banks: BankAccount[] }
+interface PaySettings { momo_number: string; momo_name: string; orange_number: string; orange_name: string; banks: BankAccount[] }
 
 // ── Billing helpers (all anchored to dueDay of month) ────────────────────────
 // dueDay is clamped to the actual days in each month, so a lease starting on
@@ -63,7 +63,7 @@ function usePaySettings() {
   return useQuery<PaySettings | null>({
     queryKey: ['payment-settings'],
     queryFn: async () => {
-      const { data } = await supabase.from('payment_settings').select('momo_number,momo_name,banks').maybeSingle()
+      const { data } = await supabase.from('payment_settings').select('momo_number,momo_name,orange_number,orange_name,banks').maybeSingle()
       return data as PaySettings | null
     },
     staleTime: 300_000,
@@ -132,9 +132,11 @@ export default function PayRent() {
   const { data: paySettings }   = usePaySettings()
   const { data: lastPayment }   = useLastConfirmedPayment(profile?.id)
 
-  const momoNumber = paySettings?.momo_number ?? '088 605 5575'
-  const momoName   = paySettings?.momo_name   ?? 'George Rental'
-  const bankList   = paySettings?.banks ?? []
+  const momoNumber   = paySettings?.momo_number   ?? '088 605 5575'
+  const momoName     = paySettings?.momo_name     ?? 'George Rental'
+  const orangeNumber = paySettings?.orange_number ?? ''
+  const orangeName   = paySettings?.orange_name   ?? 'George Rental'
+  const bankList     = paySettings?.banks ?? []
 
   // dueDay is anchored to lease start date (e.g. 24)
   const dueDay = lease?.start_date ? new Date(lease.start_date).getDate() : null
@@ -146,10 +148,11 @@ export default function PayRent() {
 
   const [step,        setStep]        = useState<1 | 2 | 3>(1)
   const [method,      setMethod]      = useState<Method>('mtn_momo')
+  const [copiedNum,   setCopiedNum]   = useState<'mtn' | 'orange' | null>(null)
   const [monthsCount, setMonthsCount] = useState(1)
   const [proofFile,   setProofFile]   = useState<File | null>(null)
   const [done,        setDone]        = useState(false)
-  const [copied,      setCopied]      = useState(false)
+  const [copied,      setCopied]      = useState(false)  // kept for legacy ref; use copiedNum
 
   const { register, handleSubmit, watch, setValue } = useForm<FormValues>({
     defaultValues: { period_month: defaultPeriod },
@@ -223,10 +226,11 @@ export default function PayRent() {
     onSuccess: () => setDone(true),
   })
 
-  function copyMtn() {
-    navigator.clipboard.writeText(momoNumber)
+  function copyNumber(num: string, which: 'mtn' | 'orange') {
+    navigator.clipboard.writeText(num)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setCopiedNum(which)
+    setTimeout(() => { setCopied(false); setCopiedNum(null) }, 2000)
   }
 
   function reset() {
@@ -366,8 +370,9 @@ export default function PayRent() {
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 12 }}>Payment method</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
               {([
-                { id: 'mtn_momo',      label: 'MTN Mobile Money', sub: 'Instant — most popular', badge: 'MTN',  badgeColor: '#FFC107' },
-                { id: 'bank_transfer', label: 'Bank Transfer',     sub: 'LBDI · Ecobank · UBA',  badge: 'BANK', badgeColor: 'var(--gr-navy)' },
+                { id: 'mtn_momo',      label: 'MTN Mobile Money', sub: 'Dial *156# · most popular', badge: 'MTN',    badgeColor: '#FFC107' },
+                { id: 'orange_money',  label: 'Orange Money',      sub: 'Dial *144# · Orange wallet', badge: 'ORA',   badgeColor: '#FF6B00' },
+                { id: 'bank_transfer', label: 'Bank Transfer',     sub: 'LBDI · Ecobank · UBA',       badge: 'BANK',  badgeColor: 'var(--gr-navy)' },
               ] as { id: Method; label: string; sub: string; badge: string; badgeColor: string }[]).map(m => (
                 <label key={m.id} style={{
                   display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
@@ -395,26 +400,66 @@ export default function PayRent() {
         {step === 2 && (
           <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             {method === 'mtn_momo' && (
-              <div style={{ background: 'rgba(255,193,7,0.08)', border: '1px solid rgba(255,193,7,0.3)', borderRadius: 14, padding: '16px 18px', marginBottom: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 10 }}>Send to MTN MoMo</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ background: 'rgba(255,193,7,0.07)', border: '1px solid rgba(255,193,7,0.3)', borderRadius: 14, padding: '16px 18px', marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 12 }}>MTN MoMo Instructions</div>
+                {[
+                  'Dial *156#',
+                  'Select: 1 → Send Money',
+                  'Select: 1 → MTN Mobile Money User',
+                  'Enter the receiver\'s number below',
+                  `Enter L$${totalLrd.toLocaleString()} and your PIN to confirm`,
+                ].map((step, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 7, alignItems: 'flex-start' }}>
+                    <div style={{ minWidth: 20, height: 20, borderRadius: 99, background: 'rgba(255,193,7,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#996600', marginTop: 1 }}>{i + 1}</div>
+                    <div style={{ fontSize: 13, color: 'var(--gr-stone)', lineHeight: 1.4 }}>{step}</div>
+                  </div>
+                ))}
+                <div style={{ marginTop: 12, padding: '12px 14px', background: '#fff', borderRadius: 10, border: '1px solid rgba(255,193,7,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
                     <div style={{ fontSize: 11, color: 'var(--gr-stone-2)' }}>{momoName}</div>
-                    <div style={{ fontFamily: 'var(--f-mono)', fontSize: 18, fontWeight: 700, color: 'var(--gr-ink)', marginTop: 4 }}>{momoNumber}</div>
+                    <div style={{ fontFamily: 'var(--f-mono)', fontSize: 18, fontWeight: 700, color: 'var(--gr-ink)', marginTop: 2 }}>{momoNumber}</div>
                   </div>
-                  <button type="button" onClick={copyMtn} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,193,7,0.4)', background: 'none', cursor: 'pointer', fontSize: 12, color: copied ? 'var(--gr-mint)' : 'var(--gr-ink)', fontWeight: 500 }}>
-                    <IconCopy size={13} />{copied ? 'Copied!' : 'Copy'}
+                  <button type="button" onClick={() => copyNumber(momoNumber, 'mtn')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,193,7,0.4)', background: 'none', cursor: 'pointer', fontSize: 12, color: copiedNum === 'mtn' ? 'var(--gr-mint)' : 'var(--gr-ink)', fontWeight: 500 }}>
+                    <IconCopy size={13} />{copiedNum === 'mtn' ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
-                <div style={{ marginTop: 12, padding: '10px 12px', background: 'rgba(255,193,7,0.1)', borderRadius: 8, fontSize: 12, color: 'var(--gr-stone-2)', lineHeight: 1.5 }}>
-                  Send <strong style={{ color: 'var(--gr-ink)' }}>L${totalLrd.toLocaleString()}</strong> and enter the transaction ID below.
-                </div>
+              </div>
+            )}
+            {method === 'orange_money' && (
+              <div style={{ background: 'rgba(255,107,0,0.07)', border: '1px solid rgba(255,107,0,0.3)', borderRadius: 14, padding: '16px 18px', marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 12 }}>Orange Money Instructions</div>
+                {[
+                  'Dial *144#',
+                  'Select: Transfer Money',
+                  'Enter the receiver\'s number below',
+                  `Enter L$${totalLrd.toLocaleString()} and your PIN to confirm`,
+                ].map((step, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 7, alignItems: 'flex-start' }}>
+                    <div style={{ minWidth: 20, height: 20, borderRadius: 99, background: 'rgba(255,107,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#CC4400', marginTop: 1 }}>{i + 1}</div>
+                    <div style={{ fontSize: 13, color: 'var(--gr-stone)', lineHeight: 1.4 }}>{step}</div>
+                  </div>
+                ))}
+                {orangeNumber ? (
+                  <div style={{ marginTop: 12, padding: '12px 14px', background: '#fff', borderRadius: 10, border: '1px solid rgba(255,107,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'var(--gr-stone-2)' }}>{orangeName}</div>
+                      <div style={{ fontFamily: 'var(--f-mono)', fontSize: 18, fontWeight: 700, color: 'var(--gr-ink)', marginTop: 2 }}>{orangeNumber}</div>
+                    </div>
+                    <button type="button" onClick={() => copyNumber(orangeNumber, 'orange')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,107,0,0.3)', background: 'none', cursor: 'pointer', fontSize: 12, color: copiedNum === 'orange' ? 'var(--gr-mint)' : 'var(--gr-ink)', fontWeight: 500 }}>
+                      <IconCopy size={13} />{copiedNum === 'orange' ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 10, fontSize: 12, color: 'var(--gr-stone-2)' }}>Contact the office for the Orange Money number.</div>
+                )}
               </div>
             )}
             {method === 'bank_transfer' && (
               <div style={{ background: 'rgba(11,26,61,0.05)', border: '1px solid var(--gr-line)', borderRadius: 14, padding: '16px 18px', marginBottom: 20 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gr-ink)', marginBottom: 12 }}>Bank Account Details</div>
-                {bankList.map(b => (
+                {bankList.length === 0 ? (
+                  <div style={{ fontSize: 13, color: 'var(--gr-stone-2)' }}>Contact the office for bank account details.</div>
+                ) : bankList.map(b => (
                   <div key={b.bank} style={{ marginBottom: 8 }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gr-navy)' }}>{b.bank}</span>
                     <span style={{ fontFamily: 'var(--f-mono)', fontSize: 12, color: 'var(--gr-ink)', marginLeft: 10 }}>{b.account}</span>
@@ -437,8 +482,8 @@ export default function PayRent() {
                 )}
               </div>
               <div>
-                <label style={labelStyle}>{method === 'mtn_momo' ? 'MTN Transaction ID' : 'Bank Reference'}</label>
-                <input placeholder={method === 'mtn_momo' ? 'e.g. 1234567890' : 'e.g. TRF2025XXXX'} {...register('transaction_ref')} style={inputStyle} />
+                <label style={labelStyle}>{method === 'mtn_momo' ? 'MTN Transaction ID' : method === 'orange_money' ? 'Orange Money Transaction ID' : 'Bank Reference'}</label>
+                <input placeholder={method === 'bank_transfer' ? 'e.g. TRF2025XXXX' : 'e.g. 1234567890'} {...register('transaction_ref')} style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>Upload proof (screenshot / receipt)</label>
@@ -468,7 +513,7 @@ export default function PayRent() {
                 { label: 'Covers',       value: coverageLabel },
                 { label: 'Amount (USD)', value: `$${totalUsd.toLocaleString()}${monthsCount > 1 ? ` (${monthsCount} × $${monthlyRent.toLocaleString()})` : ''}` },
                 { label: 'Amount (LRD)', value: `L${totalLrd.toLocaleString()}` },
-                { label: 'Method',       value: method === 'mtn_momo' ? 'MTN Mobile Money' : 'Bank Transfer' },
+                { label: 'Method',       value: method === 'mtn_momo' ? 'MTN Mobile Money' : method === 'orange_money' ? 'Orange Money' : 'Bank Transfer' },
                 { label: 'Proof',        value: proofFile ? proofFile.name : 'None uploaded' },
               ].map(r => (
                 <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between' }}>

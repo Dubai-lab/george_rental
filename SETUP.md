@@ -100,6 +100,27 @@ webhooks for them.
 
 ---
 
+## Two-step sign-in (authenticator app)
+
+- **Owner:** required. On first sign-in the owner is taken to a setup screen:
+  scan the QR code with Google Authenticator and enter the 6-digit code. Until
+  that is done the owner account can do nothing — the database itself refuses
+  owner actions from a password-only sign-in.
+- **Tenants:** optional, turned on from Profile → Account Security.
+
+### If the authenticator phone is lost
+
+- **A tenant:** confirm it is really them, then Owner dashboard → Tenants →
+  open the tenant → **Reset two-step sign-in**. They sign in with their
+  password and can set it up again.
+- **The owner:** Supabase Dashboard → Authentication → Users → open the owner
+  user → remove the MFA factor. Then sign in and set it up again. (This is why
+  your Supabase account itself must have a strong password and two-step.)
+
+Deploy the reset function once: `supabase functions deploy reset-two-step`
+
+---
+
 ## Step 4: Add your Mapbox token (optional)
 
 Edit `.env.local`:

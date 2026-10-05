@@ -1,10 +1,27 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User } from '@supabase/supabase-js'
+import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { Profile } from '@/types'
 
+// Two-step sign-in state, read straight from the session (no network call):
+//   enrolled — the account has an authenticator app set up
+//   verified — this session has passed the second step (token is 'aal2')
+export interface MfaState { enrolled: boolean; verified: boolean }
+
+function mfaFromSession(session: Session | null): MfaState | null {
+  if (!session) return null
+  let aal = ''
+  try {
+    const payload = session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    aal = JSON.parse(atob(payload)).aal ?? ''
+  } catch { /* unreadable token → treat as not verified */ }
+  const enrolled = (session.user.factors ?? []).some(f => f.status === 'verified')
+  return { enrolled, verified: aal === 'aal2' }
+}
+
 interface AuthContextType {
   user:           User | null
+  mfa:            MfaState | null
   profile:        Profile | null
   loading:        boolean
   signIn:         (email: string, password: string) => Promise<'owner' | 'tenant'>
@@ -30,6 +47,7 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user,    setUser]    = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [mfa,     setMfa]     = useState<MfaState | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -47,6 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // SIGNED_IN is handled directly inside signIn() — skip it here to
         // avoid a duplicate profile fetch racing with the one in signIn().
         if (event === 'SIGNED_IN') return
+
+        setMfa(mfaFromSession(session))
 
         if (session?.user) {
           setUser(session.user)
@@ -101,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setUser(data.user)
+    setMfa(mfaFromSession(data.session))
     setProfile(p)
     return p.role
   }
@@ -109,6 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
+    setMfa(null)
   }
 
   async function refreshProfile() {
@@ -119,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, mfa, loading, signIn, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

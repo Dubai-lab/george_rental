@@ -31,6 +31,11 @@ async function getCaller(req: Request): Promise<{ id: string; role: string } | n
   if (!data?.user) return null
   const { data: profile } = await supabase
     .from('profiles').select('id, role').eq('id', data.user.id).maybeSingle()
+  if (!profile) return null
+  // The owner only counts as owner when signed in with two-step (token 'aal2')
+  let aal = ''
+  try { aal = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).aal ?? '' } catch { /* ignore */ }
+  if (profile.role === 'owner' && aal !== 'aal2') return { id: profile.id, role: 'owner-unverified' }
   return profile
 }
 

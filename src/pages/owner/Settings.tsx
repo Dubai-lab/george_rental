@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import Btn from '@/components/ui/Btn'
+import TwoStepCard from '@/components/ui/TwoStepCard'
 import { IconClose } from '@/components/ui/Icons'
 
 interface BankAccount { bank: string; account: string; name: string }
@@ -278,6 +279,11 @@ export default function OwnerSettings() {
             ))}
           </div>
         )}
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontFamily: 'var(--f-display)', fontSize: 18, fontWeight: 700, color: 'var(--gr-ink)', letterSpacing: '-0.02em', margin: '12px 0 12px' }}>Account Security</div>
+        <TwoStepCard required />
       </div>
 
       <div style={{ fontSize: 11, color: 'var(--gr-stone-2)' }}>

@@ -8,6 +8,7 @@ import TenantLayout from '@/components/layout/TenantLayout'
 const Landing        = lazy(() => import('@/pages/Landing'))
 const SignIn         = lazy(() => import('@/pages/SignIn'))
 const SignUp         = lazy(() => import('@/pages/SignUp'))
+const TwoStep        = lazy(() => import('@/pages/TwoStep'))
 const AcceptInvite   = lazy(() => import('@/pages/AcceptInvite'))
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'))
 const ResetPassword  = lazy(() => import('@/pages/ResetPassword'))
@@ -33,8 +34,17 @@ const Receipts          = lazy(() => import('@/pages/tenant/Receipts'))
 const TenantMaintenance = lazy(() => import('@/pages/tenant/TenantMaintenance'))
 const TenantProfile     = lazy(() => import('@/pages/tenant/TenantProfile'))
 
+// Does this signed-in user still owe the second sign-in step?
+//  • anyone with an authenticator set up must pass it each sign-in
+//  • the owner must have one (they are sent to set it up)
+function needsTwoStep(role: 'owner' | 'tenant', mfa: { enrolled: boolean; verified: boolean } | null): boolean {
+  if (!mfa) return false
+  if (mfa.enrolled) return !mfa.verified
+  return role === 'owner'
+}
+
 function OwnerRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, mfa, loading } = useAuth()
   // 1. Still resolving session → show spinner
   if (loading) return <LoadingScreen />
   // 2. No session at all → send to sign-in
@@ -44,23 +54,26 @@ function OwnerRoute({ children }: { children: React.ReactNode }) {
   if (!profile) return <LoadingScreen />
   // 4. Wrong role
   if (profile.role !== 'owner') return <Navigate to="/tenant" replace />
+  if (needsTwoStep(profile.role, mfa)) return <Navigate to="/two-step" replace />
   return <>{children}</>
 }
 
 function TenantRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, mfa, loading } = useAuth()
   if (loading) return <LoadingScreen />
   if (!user) return <Navigate to="/" replace />
   if (!profile) return <LoadingScreen />
   if (profile.role !== 'tenant') return <Navigate to="/owner" replace />
+  if (needsTwoStep(profile.role, mfa)) return <Navigate to="/two-step" replace />
   return <>{children}</>
 }
 
 function RootRedirect() {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, mfa, loading } = useAuth()
   if (loading) return <LoadingScreen />
   if (!user) return <Landing />
   if (!profile) return <LoadingScreen />
+  if (needsTwoStep(profile.role, mfa)) return <Navigate to="/two-step" replace />
   if (profile.role === 'owner') return <Navigate to="/owner" replace />
   return <Navigate to="/tenant" replace />
 }
@@ -73,6 +86,7 @@ export default function App() {
         <Route path="/" element={<RootRedirect />} />
         <Route path="/sign-in"         element={<SignIn />} />
         <Route path="/sign-up"         element={<SignUp />} />
+        <Route path="/two-step"        element={<TwoStep />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password"  element={<ResetPassword />} />
         <Route path="/stores"          element={<PublicStores />} />

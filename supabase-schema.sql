@@ -199,10 +199,29 @@ stable
 security definer
 set search_path = ''
 as $$
+  -- Owner powers need BOTH the owner role and a two-step sign-in ('aal2').
+  -- A stolen owner password alone therefore unlocks nothing.
   select exists (
     select 1 from public.profiles
     where id = (select auth.uid()) and role = 'owner'
-  );
+  )
+  and coalesce((select auth.jwt()) ->> 'aal', '') = 'aal2';
+$$;
+
+-- For everyone else two-step is optional — but once an account has turned it
+-- on, a password-only session ('aal1') must not be able to read their data.
+create or replace function public.mfa_satisfied()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce((select auth.jwt()) ->> 'aal', '') = 'aal2'
+      or not exists (
+        select 1 from auth.mfa_factors f
+        where f.user_id = (select auth.uid()) and f.status::text = 'verified'
+      );
 $$;
 
 -- Does the signed-in user (matched by the email in their login token) hold an
@@ -223,6 +242,8 @@ as $$
   );
 $$;
 
+revoke all on function public.mfa_satisfied()                    from public;
+grant execute on function public.mfa_satisfied()                   to anon, authenticated, service_role;
 revoke all on function public.is_owner()                         from public;
 revoke all on function public.has_pending_invite(uuid, numeric)  from public;
 grant execute on function public.is_owner()                        to anon, authenticated, service_role;
@@ -621,6 +642,42 @@ create policy "tenant_invites: owner manages" on public.tenant_invites
   with check (public.is_owner());
 
 
+-- ── Two-step sign-in, enforced by the database ─────────────────────────────
+-- RESTRICTIVE policies are ANDed with everything above: if an account has an
+-- authenticator, its password-only sessions get nothing from these tables.
+-- (profiles SELECT is left out on purpose — the app must read the user's own
+-- profile to know where to send them for the second step.)
+drop policy if exists "two-step required when enabled" on public.leases;
+create policy "two-step required when enabled" on public.leases
+  as restrictive for all to authenticated
+  using (public.mfa_satisfied()) with check (public.mfa_satisfied());
+
+drop policy if exists "two-step required when enabled" on public.payments;
+create policy "two-step required when enabled" on public.payments
+  as restrictive for all to authenticated
+  using (public.mfa_satisfied()) with check (public.mfa_satisfied());
+
+drop policy if exists "two-step required when enabled" on public.maintenance_requests;
+create policy "two-step required when enabled" on public.maintenance_requests
+  as restrictive for all to authenticated
+  using (public.mfa_satisfied()) with check (public.mfa_satisfied());
+
+drop policy if exists "two-step required when enabled" on public.store_enquiries;
+create policy "two-step required when enabled" on public.store_enquiries
+  as restrictive for all to authenticated
+  using (public.mfa_satisfied()) with check (public.mfa_satisfied());
+
+drop policy if exists "two-step required when enabled" on public.tenant_invites;
+create policy "two-step required when enabled" on public.tenant_invites
+  as restrictive for all to authenticated
+  using (public.mfa_satisfied()) with check (public.mfa_satisfied());
+
+drop policy if exists "two-step required to edit profile" on public.profiles;
+create policy "two-step required to edit profile" on public.profiles
+  as restrictive for update to authenticated
+  using (public.mfa_satisfied()) with check (public.mfa_satisfied());
+
+
 -- ───────────────────────────────────────────────────────────────────────────
 -- 5. STORAGE
 -- store-photos is public (it feeds the public listing). payment-proofs and
@@ -645,6 +702,7 @@ create policy "proofs: tenant uploads to own folder" on storage.objects
   with check (
     bucket_id = 'payment-proofs'
     and (storage.foldername(name))[1] = (select auth.uid())::text
+    and public.mfa_satisfied()
   );
 
 -- Tenants can open their own proofs …
@@ -654,6 +712,7 @@ create policy "proofs: tenant reads own folder" on storage.objects
   using (
     bucket_id = 'payment-proofs'
     and (storage.foldername(name))[1] = (select auth.uid())::text
+    and public.mfa_satisfied()
   );
 
 -- … and the agreement for their own lease (files are stored as <lease id>/…).
@@ -667,6 +726,7 @@ create policy "agreements: tenant reads own lease" on storage.objects
       where l.id::text    = (storage.foldername(name))[1]
         and l.tenant_id   = (select auth.uid())
     )
+    and public.mfa_satisfied()
   );
 
 -- The owner can read / upload / replace / delete in all three buckets.

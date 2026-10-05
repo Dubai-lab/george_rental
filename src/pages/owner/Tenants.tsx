@@ -77,11 +77,24 @@ export default function Tenants() {
   const [uploadErr, setUploadErr]       = useState('')
   const [agreementUrl, setAgreementUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [resetMsg, setResetMsg]   = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
+
+  // Recovery for a tenant who lost their authenticator phone
+  async function resetTwoStep(t: TenantRow) {
+    if (!window.confirm(`Reset two-step sign-in for ${t.full_name}?\n\nOnly do this after confirming it is really them (in person or by a call to their known number). They will sign in with just their password until they set it up again.`)) return
+    setResetting(true); setResetMsg(null)
+    const { data, error } = await supabase.functions.invoke('reset-two-step', { body: { user_id: t.id } })
+    setResetting(false)
+    if (error) { setResetMsg('Could not reset. Try again.'); return }
+    setResetMsg(data?.removed ? 'Two-step sign-in has been reset for this tenant.' : 'This tenant did not have two-step sign-in turned on.')
+  }
 
   function openDrawer(t: TenantRow) {
     setSelected(t)
     setAgreementUrl(t.lease?.agreement_url ?? null)
     setUploadErr('')
+    setResetMsg(null)
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -284,6 +297,21 @@ export default function Tenants() {
                 <Section title="Contact">
                   <InfoRow icon={<IconMail size={15} />} label="Email" value={selected.email ?? '—'} />
                   <InfoRow icon={<IconPhone size={15} />} label="Phone" value={selected.phone ?? 'Not provided'} />
+                </Section>
+
+                <Section title="Account Security">
+                  <div style={{ fontSize: 12, color: 'var(--gr-stone-2)', lineHeight: 1.6 }}>
+                    If this tenant lost the phone with their authenticator app, you can reset their two-step sign-in.
+                  </div>
+                  {resetMsg && <div role="status" style={{ fontSize: 12, color: 'var(--gr-ink)', padding: '8px 12px', background: 'var(--gr-paper)', borderRadius: 8 }}>{resetMsg}</div>}
+                  <button
+                    type="button"
+                    onClick={() => resetTwoStep(selected)}
+                    disabled={resetting}
+                    style={{ alignSelf: 'flex-start', height: 34, padding: '0 14px', borderRadius: 8, background: '#fff', border: '1px solid var(--gr-line)', fontWeight: 600, fontSize: 12, cursor: 'pointer', opacity: resetting ? 0.6 : 1 }}
+                  >
+                    {resetting ? 'Resetting…' : 'Reset two-step sign-in'}
+                  </button>
                 </Section>
 
                 {/* Lease */}

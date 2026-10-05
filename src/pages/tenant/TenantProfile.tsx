@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { openPrivateFile } from '@/lib/privateFile'
 import { Lease, Store } from '@/types'
 import Avatar from '@/components/ui/Avatar'
+import TwoStepCard from '@/components/ui/TwoStepCard'
 import { IconPhone, IconMail, IconStore, IconLogout, IconCheck, IconClose, IconCalendar } from '@/components/ui/Icons'
 
 type TenantLease = Lease & { store: Store }
@@ -204,6 +205,12 @@ export default function TenantProfile() {
           </div>
         </div>
       )}
+
+      {/* ── Account security ─────────────────────────────────────── */}
+      <div style={{ padding: '24px 20px 0' }}>
+        <div style={sectionLabel}>Account Security</div>
+        <TwoStepCard />
+      </div>
 
       {/* ── Sign out ─────────────────────────────────────────────── */}
       <div style={{ padding: '32px 20px 0' }}>

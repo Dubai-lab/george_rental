@@ -1,25 +1,66 @@
 {
   "expo": {
-    "name": "george_rental_mobile",
-    "slug": "george_rental_mobile",
+    "name": "George Rental",
+    "slug": "george-rental",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "lr.georgerental.tenant",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "lr.georgerental.tenant",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#060914",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": [
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "predictiveBackGestureEnabled": false
     },
+    "plugins": [
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "George Rental uses Face ID so you can sign in without typing your password."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "George Rental uses Face ID so you can sign in without typing your password."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "George Rental needs access to your photos to upload payment proof.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      "expo-status-bar"
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "2852e565-430f-416f-a053-b8aedf5dcda7"
+      }
+    },
+    "owner": "emmageoreges-organization",
+    "backgroundColor": "#060914"
   }
 }

@@ -156,36 +156,50 @@ npm run dev
 
 ---
 
-## Running the mobile app (tenant only)
+## Running the mobile app (tenant only, iPhone + Android)
 
-The mobile app is at `C:\Users\eg821\Desktop\george_rental_mobile`
-
-### Install Expo Go on your phone
-
-- Android: search **Expo Go** on Google Play Store
-- iOS: search **Expo Go** on the App Store
-
-### Start the dev server
+The app is in `george_rental_mobile/` inside this folder.
 
 ```bash
-cd C:\Users\eg821\Desktop\george_rental_mobile
-npm start
+cd george_rental_mobile
+npm install
+npx expo start
 ```
 
-This opens a QR code in the terminal.
+Scan the QR code with **Expo Go** to try the screens quickly.
 
-- **Android**: Open Expo Go → tap "Scan QR code" → scan it
-- **iOS**: Open your Camera app → scan the QR code → tap the Expo Go prompt
+### Face ID / fingerprint sign-in needs a real build
 
-The app will load on your phone. Any change you save in the code reloads instantly.
+Expo Go cannot use Face ID on iPhone. To test or release biometric sign-in,
+make an installable build (needs a free Expo account; iPhone builds also need
+an Apple Developer account):
 
-### Screens in the mobile app
+```bash
+npm install -g eas-cli
+eas login
+eas build --profile preview --platform android   # gives an .apk to install
+eas build --profile preview --platform ios       # iPhone test build
+```
+
+### How sign-in works in the app
+
+| Step | What happens |
+|------|--------------|
+| First sign-in | Email + password (and the authenticator code, if two-step is on) |
+| After that | The app offers **Sign in with Face ID / fingerprint**. Opening the app then only needs the face or finger; it locks again after 30 seconds in the background |
+| Fallback | The phone's own passcode, or "Use password instead" (signs out) |
+| Turn on/off | Profile → Account Security |
+
+The sign-in session is stored in the phone's secure store (Keychain / Keystore).
+Owner accounts cannot sign in to the app — the owner uses the website.
+
+### Screens
 
 | Screen      | Description                                        |
 | ----------- | -------------------------------------------------- |
-| Sign In     | Email + password login                             |
+| Sign In     | Email + password                                   |
 | Home        | Rent status card, quick actions, recent payments   |
 | Pay Rent    | 3-step wizard: Method → Upload proof → Confirm     |
 | Receipts    | Full payment history with receipt numbers          |
 | Maintenance | Submit requests + track status                     |
-| Profile     | Account info + sign out                            |
+| Profile     | Account info, account security, sign out           |

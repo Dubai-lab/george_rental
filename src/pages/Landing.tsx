@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import GRLogo from '@/components/ui/GRLogo'
-import { IconArrow, IconLock } from '@/components/ui/Icons'
+import { IconArrow } from '@/components/ui/Icons'
 import { useWindowWidth } from '@/hooks/useWindowWidth'
 
 const STATS = [
@@ -59,17 +59,17 @@ export default function Landing() {
                 borderRadius: 8, fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center',
                 textDecoration: 'none',
               }}>
-                Owner sign in
+                Sign in
               </Link>
             )}
-            <Link to="/sign-in" style={{
+            <Link to="/sign-up" style={{
               height: 38, padding: '0 18px', background: 'var(--gr-crimson)', color: '#fff',
               border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
               display: 'inline-flex', alignItems: 'center',
               boxShadow: '0 8px 24px rgba(209,31,44,0.35)',
               textDecoration: 'none',
             }}>
-              Pay my rent →
+              Create account
             </Link>
 
             {/* Hamburger (mobile only) */}
@@ -113,7 +113,8 @@ export default function Landing() {
                 { label: 'Pay rent',      to: '/sign-in' },
                 { label: 'Help',          href: '#help' },
                 { label: 'Contact',       href: '#contact' },
-                { label: 'Owner sign in', to: '/sign-in' },
+                { label: 'Sign in',        to: '/sign-in' },
+                { label: 'Create account', to: '/sign-up' },
               ].map(item => (
                 item.href ? (
                   <a
@@ -165,9 +166,9 @@ export default function Landing() {
             borderRadius: 999, fontSize: 12, color: 'rgba(246,241,228,0.7)', marginBottom: 24,
           }}>
             <span style={{ padding: '3px 10px', background: 'var(--gr-crimson)', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em' }}>
-              FOR TENANTS
+              MONROVIA
             </span>
-            For shopkeepers renting from George Rental
+            For shopkeepers renting — or looking to rent — from George Rental
           </div>
 
           {/* Headline */}
@@ -204,14 +205,13 @@ export default function Landing() {
             }}>
               Pay my rent <IconArrow size={16} stroke="#fff" />
             </Link>
-            <Link to="/sign-in" style={{
+            <Link to="/stores" style={{
               height: 52, padding: '0 22px', background: 'transparent', color: 'var(--gr-cream)',
               border: '1px solid rgba(246,241,228,0.22)', borderRadius: 10, fontSize: 15, fontWeight: 500,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               textDecoration: 'none',
             }}>
-              <IconLock size={15} stroke="var(--gr-cream)" />
-              Owner / staff sign in
+              Find a store to rent
             </Link>
           </div>
 
@@ -340,7 +340,7 @@ export default function Landing() {
             {[
               { q: 'How do I pay my rent?', a: 'Sign in to your tenant account, go to "Pay Rent", choose MTN MoMo or bank transfer, enter the transaction reference, and upload your proof of payment. Your landlord will confirm within 24 hours.' },
               { q: 'How do I get my receipt?', a: 'Once the owner confirms your payment, a receipt is automatically generated. You can view and download all your receipts from the "Receipts" tab after signing in.' },
-              { q: 'What if I don\'t have an account?', a: 'Tenant accounts are created by invitation only. Contact the George Rental office and they will send you an invite link by email to set up your account.' },
+              { q: 'What if I don\'t have an account?', a: 'Anyone can create a free account — tap "Create account" at the top of this page. With an account you can request any available store and follow your requests. Once the office assigns you a store, the same account is used to pay rent and get receipts.' },
               { q: 'What payment methods are accepted?', a: 'MTN Mobile Money (primary), bank transfer via LBDI, Ecobank, or UBA, and cash payments accepted at the office.' },
               { q: 'How do I report a maintenance issue?', a: 'Sign in and go to the "Maintenance" tab. Submit a request with a description and priority level. The management team will follow up.' },
             ].map(({ q, a }) => (
@@ -388,6 +388,14 @@ export default function Landing() {
               color: '#fff', fontSize: 14, fontWeight: 600, textDecoration: 'none',
             }}>
               Sign in →
+            </Link>
+            <Link to="/sign-up" style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              height: 48, borderRadius: 10, background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              color: 'var(--gr-cream)', fontSize: 14, fontWeight: 500, textDecoration: 'none',
+            }}>
+              Create an account
             </Link>
             <Link to="/stores" style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import { Store, Area } from '@/types'
 import GRLogo from '@/components/ui/GRLogo'
 import Pill from '@/components/ui/Pill'
@@ -147,7 +148,7 @@ function arrowBtn(side: 'left' | 'right'): React.CSSProperties {
 // ── Enquiry form ─────────────────────────────────────────────────
 interface EnquiryFormProps {
   store: StoreWithArea
-  onSuccess: (hadEmail: boolean) => void
+  onSuccess: (hadEmail: boolean, tracked: boolean) => void
 }
 
 function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
@@ -159,6 +160,15 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
   const [err,       setErr]       = useState<string | null>(null)
   const fw = useWindowWidth()
   const formMobile = fw < 640
+  const { user, profile } = useAuth()
+
+  // Signed-in visitors: fill in what we already know (never overwrite typing)
+  useEffect(() => {
+    if (!profile) return
+    setName(v  => v || profile.full_name || '')
+    setEmail(v => v || profile.email || '')
+    setPhone(v => v || profile.phone || '')
+  }, [profile])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -169,6 +179,7 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
 
     const { error } = await supabase.from('store_enquiries').insert({
       store_id: store.id,
+      user_id:  user?.id ?? null,
       name:     name.trim(),
       email:    email.trim() || null,
       phone:    phone.trim() || null,
@@ -190,7 +201,7 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
     }).catch(() => {})
 
     setSubmitting(false)
-    onSuccess(!!email.trim())
+    onSuccess(!!email.trim(), !!user)
   }
 
   return (
@@ -243,12 +254,19 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
       <p style={{ fontSize: 12, color: '#9E9893', margin: 0, textAlign: 'center', lineHeight: 1.6 }}>
         By submitting you agree to be contacted by George Rental regarding this property.
       </p>
+      {!user && (
+        <p style={{ fontSize: 12, color: '#9E9893', margin: 0, textAlign: 'center', lineHeight: 1.6 }}>
+          No account needed. Want to track your requests?{' '}
+          <Link to="/sign-up" style={{ color: '#D11F2C', fontWeight: 600 }}>Create a free account</Link>
+          {' '}or <Link to="/sign-in" style={{ color: '#D11F2C', fontWeight: 600 }}>sign in</Link> first.
+        </p>
+      )}
     </form>
   )
 }
 
 // ── Success banner ───────────────────────────────────────────────
-function SuccessBanner({ hadEmail, onClose }: { hadEmail: boolean; onClose: () => void }) {
+function SuccessBanner({ hadEmail, tracked, onClose }: { hadEmail: boolean; tracked: boolean; onClose: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95, y: 8 }}
@@ -269,6 +287,11 @@ function SuccessBanner({ hadEmail, onClose }: { hadEmail: boolean; onClose: () =
           ? "Your request has been submitted. We’ve sent a confirmation to your email. We will get back to you shortly."
           : 'Your request has been submitted. We will get back to you shortly.'}
       </div>
+      {tracked && (
+        <Link to="/tenant" style={{ display: 'inline-block', marginTop: 16, padding: '9px 18px', borderRadius: 8, background: '#fff', color: '#1a5c3a', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+          Track this request →
+        </Link>
+      )}
       <div style={{ marginTop: 20, fontSize: 14, color: 'rgba(255,255,255,0.75)' }}>
         Call us directly: <strong style={{ color: '#fff' }}>+231 88 605 5575 / +231 77 056 7682</strong>
       </div>
@@ -283,13 +306,16 @@ export default function StoreDetail() {
   const { data: store, isLoading } = useStore(id!)
   const [done, setDone]       = useState(false)
   const [hadEmail, setHadEmail] = useState(false)
+  const [tracked, setTracked]   = useState(false)
+  const { user } = useAuth()
   const w = useWindowWidth()
   const isMobile = w < 640
 
   const photos = (store?.photos?.length ? store.photos : store?.photo_url ? [store.photo_url] : []) as string[]
 
-  function handleSuccess(email: boolean) {
+  function handleSuccess(email: boolean, wasTracked: boolean) {
     setHadEmail(email)
+    setTracked(wasTracked)
     setDone(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -310,12 +336,12 @@ export default function StoreDetail() {
           <button type="button" onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'rgba(246,241,228,0.65)', display: 'flex', alignItems: 'center', gap: 6 }}>
             ← {isMobile ? 'Back' : 'Back to stores'}
           </button>
-          <Link to="/sign-in" style={{
+          <Link to={user ? '/' : '/sign-in'} style={{
             height: 34, padding: '0 16px', background: 'var(--gr-crimson)', color: '#fff',
             borderRadius: 8, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center',
             textDecoration: 'none', gap: 6,
           }}>
-            {isMobile ? 'Sign in' : 'Tenant sign in'} <IconArrow size={13} stroke="#fff" />
+            {user ? 'My account' : 'Sign in'} <IconArrow size={13} stroke="#fff" />
           </Link>
         </nav>
       </header>
@@ -386,7 +412,7 @@ export default function StoreDetail() {
               <div style={{ background: '#fff', border: '1px solid var(--gr-line)', borderRadius: 16, padding: isMobile ? '20px 16px' : '28px 28px' }}>
                 <AnimatePresence mode="wait">
                   {done ? (
-                    <SuccessBanner key="success" hadEmail={hadEmail} onClose={() => setDone(false)} />
+                    <SuccessBanner key="success" hadEmail={hadEmail} tracked={tracked} onClose={() => setDone(false)} />
                   ) : (
                     <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                       <div style={{ marginBottom: 20 }}>

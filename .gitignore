@@ -12,13 +12,15 @@ dist-ssr
 
 # Sensitive / private files — never commit these
 Design/
-supabase/
 supabase-info.md
-supabase-patches.sql
-supabase-schema.sql
 Problems_with_Past_Projects_Claude_Build_me.md
 .claude/
 supabase/.temp/
+supabase/.env
+
+# NOTE: supabase-schema.sql, supabase-seed-stores.sql and supabase/functions/
+# are deliberately NOT ignored. They contain no secrets, and ignoring them is
+# how the database schema was lost in October 2026.
 
 # Editor
 .vscode/*

@@ -57,7 +57,7 @@ export default function SignIn() {
         <div style={{ background: 'var(--gr-midnight)', padding: '28px 32px 24px' }}>
           <GRLogo size={22} />
           <div style={{ marginTop: 18, fontSize: 14, color: 'rgba(246,241,228,0.65)', lineHeight: 1.5 }}>
-            Sign in to manage your properties, record payments, and track your rental income.
+            Sign in to pay rent, view your receipts, and track your store requests.
           </div>
         </div>
 
@@ -81,7 +81,7 @@ export default function SignIn() {
             <input
               type="email"
               autoComplete="email"
-              placeholder="owner@georgerental.com"
+              placeholder="you@example.com"
               {...register('email', { required: 'Email is required' })}
               style={{ ...inputStyle, borderColor: errors.email ? 'var(--gr-crimson)' : 'var(--gr-line)' }}
             />
@@ -125,6 +125,13 @@ export default function SignIn() {
           >
             Sign in
           </Btn>
+
+          <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--gr-stone-2)' }}>
+            Don't have an account?{' '}
+            <Link to="/sign-up" style={{ color: 'var(--gr-crimson)', fontWeight: 600, textDecoration: 'none' }}>
+              Create one
+            </Link>
+          </div>
 
           <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--gr-stone-2)' }}>
             <Link to="/" style={{ color: 'var(--gr-stone-2)', fontWeight: 500, textDecoration: 'none' }}>

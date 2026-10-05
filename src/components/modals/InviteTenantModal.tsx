@@ -46,6 +46,19 @@ export default function InviteTenantModal({ onClose, onSuccess }: Props) {
     const store = stores.find(s => s.id === values.store_id)
     if (!store) { setError('Please select a store.'); return }
 
+    // Record the invite first — this row is what authorises the tenant to
+    // create their lease when they accept (see RLS on leases).
+    const { error: invErr } = await supabase.from('tenant_invites').insert({
+      email:         values.email.trim().toLowerCase(),
+      full_name:     values.full_name,
+      store_id:      values.store_id,
+      business_name: values.business_name || null,
+      business_type: values.business_type || null,
+      start_date:    values.start_date,
+      rent_usd:      store.rent_usd,
+    })
+    if (invErr) { setError(invErr.message); return }
+
     const { error: err } = await supabase.auth.signInWithOtp({
       email: values.email,
       options: {

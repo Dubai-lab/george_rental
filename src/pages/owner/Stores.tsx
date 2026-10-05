@@ -89,7 +89,7 @@ function StoreForm({ areas, initial, onClose, onSaved }: StoreFormProps) {
 
   async function uploadVideo(file: File) {
     if (!file.type.startsWith('video/')) { setErr('Please select a video file (MP4, MOV, etc.)'); return }
-    if (file.size > 100 * 1024 * 1024) { setErr('Video must be under 100 MB'); return }
+    if (file.size > 50 * 1024 * 1024) { setErr('Video must be under 50 MB'); return }
     setUploading(true)
     try {
       const storeId = initial?.id ?? `new-${Date.now()}`
@@ -349,7 +349,7 @@ function StoreForm({ areas, initial, onClose, onSaved }: StoreFormProps) {
               {uploading ? '⏳ Uploading…' : '🎥 Click to upload a video tour'}
             </button>
             <div style={{ fontSize: 11, color: 'var(--gr-stone-2)', marginTop: 4 }}>
-              MP4, MOV, WebM · Max 100 MB · Shows on the public store listing
+              MP4, MOV, WebM · Max 50 MB · Shows on the public store listing
             </div>
           </div>
 

@@ -7,6 +7,7 @@ import TenantLayout from '@/components/layout/TenantLayout'
 
 const Landing        = lazy(() => import('@/pages/Landing'))
 const SignIn         = lazy(() => import('@/pages/SignIn'))
+const SignUp         = lazy(() => import('@/pages/SignUp'))
 const AcceptInvite   = lazy(() => import('@/pages/AcceptInvite'))
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'))
 const ResetPassword  = lazy(() => import('@/pages/ResetPassword'))
@@ -70,6 +71,7 @@ export default function App() {
         {/* Public */}
         <Route path="/" element={<RootRedirect />} />
         <Route path="/sign-in"         element={<SignIn />} />
+        <Route path="/sign-up"         element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password"  element={<ResetPassword />} />
         <Route path="/stores"          element={<PublicStores />} />

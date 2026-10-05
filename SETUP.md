@@ -1,42 +1,56 @@
 # George Rental — Setup Guide
 
-## Step 1: Run the database schema
+## Step 1: Create the Supabase project and run the database schema
 
-Go to **Supabase Dashboard → SQL Editor → New query**
+1. Create a new project at https://supabase.com/dashboard
+2. Go to **SQL Editor → New query**, paste the whole of `supabase-schema.sql` → **Run**.
+   The result grid should list 10 tables, all with `rls_on = true`.
+3. *(Optional)* paste and run `supabase-seed-stores.sql` to load the original
+   list of 50 stores across the 4 areas. Skip this to add stores by hand on the
+   Stores page (the live project was started with only the 5 Red Light stores).
 
-Run these files IN ORDER:
-
-### 1a. Main schema (tables, triggers, RLS, storage)
-Copy and paste the contents of `supabase-schema.sql` → Run
-
-### 1b. Patches (public store access + 50 stores seed data)
-Copy and paste the contents of `supabase-patches.sql` → Run
+Both files are safe to run more than once. **Keep them in git** — they are the
+only copy of the database structure.
 
 ---
 
 ## Step 2: Create your owner account
 
-### Option A (recommended)
 1. Go to **Supabase → Authentication → Users → Add user → Create new user**
-2. Enter your email + password
+2. Enter your email + password and tick **Auto Confirm User**
 3. Go to **SQL Editor** and run:
 ```sql
 UPDATE public.profiles
 SET role = 'owner', full_name = 'Your Name'
 WHERE email = 'your@email.com';
 ```
-
-### Option B (via SQL, no UI needed)
-```sql
--- Run in SQL Editor
-SELECT supabase_auth.create_user(
-  '{"email": "owner@georgerental.lr", "password": "YourPassword123!", "user_metadata": {"role": "owner", "full_name": "George Kpoto"}}'::jsonb
-);
-```
+It must report **1 row** updated. Every account starts as a tenant; this is the
+only way to make an owner.
 
 ---
 
-## Step 3: Set up email notifications (SpaceMail SMTP)
+## Step 2b: Point the app at the new project
+
+Get the values from **Supabase → Project Settings → API**.
+
+**Local** — create `.env.local` in this folder:
+```
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key
+```
+
+**Vercel** — Project → Settings → Environment Variables: set the same two
+variables (replace the old project's values), then **Redeploy**.
+
+**Supabase → Authentication → URL Configuration**
+- Site URL: your Vercel URL (e.g. `https://your-app.vercel.app`)
+- Redirect URLs: add `https://your-app.vercel.app/**` and `http://localhost:5173/**`
+
+Without the redirect URLs, tenant invite links and password-reset links will not work.
+
+---
+
+## Step 3: Set up email notifications (Gmail SMTP)
 
 ### 3a. Configure SMTP in Supabase Auth
 
@@ -44,11 +58,11 @@ Go to **Supabase Dashboard → Authentication → SMTP Settings**:
 
 - Enable Custom SMTP: **ON**
 - Sender name: `George Rental`
-- Sender email: `support@schoolsyncedu.com`
-- Host: `mail.spacemail.com`
-- Port: `587`
-- Username: `support@schoolsyncedu.com`
-- Password: *(your SpaceMail password)*
+- Sender email: `eg8217178@gmail.com`
+- Host: `smtp.gmail.com`
+- Port: `465`
+- Username: `eg8217178@gmail.com`
+- Password: *(your Gmail app password)*
 
 ### 3b. Deploy the Edge Functions
 Install Supabase CLI first:
@@ -68,10 +82,10 @@ supabase functions deploy notify-maintenance
 ### 3c. Set environment secrets
 
 ```bash
-supabase secrets set SMTP_HOST=mail.spacemail.com
-supabase secrets set SMTP_PORT=587
-supabase secrets set SMTP_USER=support@schoolsyncedu.com
-supabase secrets set SMTP_PASS=Blessing@0880
+supabase secrets set SMTP_HOST=smtp.gmail.com
+supabase secrets set SMTP_PORT=465
+supabase secrets set SMTP_USER=eg8217178@gmail.com
+supabase secrets set SMTP_PASS=<your Gmail app password>
 ```
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set automatically.

@@ -9,6 +9,7 @@ import Pill from '@/components/ui/Pill'
 import { IconSearch, IconArrow } from '@/components/ui/Icons'
 import StoreThumb from '@/components/ui/StoreThumb'
 import { useWindowWidth } from '@/hooks/useWindowWidth'
+import { useAuth } from '@/contexts/AuthContext'
 
 type StoreWithArea = Store & { area: Pick<Area, 'name'> | null }
 
@@ -36,6 +37,7 @@ export default function PublicStores() {
   const [menuOpen, setMenuOpen] = useState(false)
   const w = useWindowWidth()
   const isMobile = w < 640
+  const { user } = useAuth()
 
   const filtered = stores.filter(s => {
     const matchQ = !q ||
@@ -72,12 +74,12 @@ export default function PublicStores() {
                 <Link to="/stores" style={{ fontSize: 13, color: 'var(--gr-cream)', fontWeight: 600, textDecoration: 'none' }}>Stores</Link>
               </>
             )}
-            <Link to="/sign-in" style={{
+            <Link to={user ? '/' : '/sign-in'} style={{
               height: 34, padding: '0 16px', background: 'var(--gr-crimson)', color: '#fff',
               borderRadius: 8, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center',
               textDecoration: 'none', gap: 6,
             }}>
-              Sign in <IconArrow size={13} stroke="#fff" />
+              {user ? 'My account' : 'Sign in'} <IconArrow size={13} stroke="#fff" />
             </Link>
             {isMobile && (
               <button
@@ -116,7 +118,8 @@ export default function PublicStores() {
               {[
                 { label: 'Home',    to: '/' },
                 { label: 'Stores',  to: '/stores' },
-                { label: 'Sign in', to: '/sign-in' },
+                user ? { label: 'My account', to: '/' } : { label: 'Sign in', to: '/sign-in' },
+                ...(user ? [] : [{ label: 'Create account', to: '/sign-up' }]),
               ].map(item => (
                 <Link
                   key={item.label}
@@ -295,10 +298,11 @@ export default function PublicStores() {
           background: 'var(--gr-midnight)', textAlign: 'center',
         }}>
           <div style={{ fontFamily: 'var(--f-display)', fontSize: 24, fontWeight: 700, color: 'var(--gr-cream)', marginBottom: 8 }}>
-            Already a tenant?
+            Have an account?
           </div>
           <div style={{ fontSize: 14, color: 'rgba(246,241,228,0.6)', marginBottom: 24 }}>
-            Sign in to pay rent, view receipts, and submit maintenance requests.
+            Sign in to track your store requests, pay rent and view receipts.{' '}
+            <Link to="/sign-up" style={{ color: 'var(--gr-cream)', fontWeight: 600 }}>New here? Create an account.</Link>
           </div>
           <Link to="/sign-in" style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,

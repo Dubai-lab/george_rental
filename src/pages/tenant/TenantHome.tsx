@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFxRate, toLrd as toLrdFn } from '@/hooks/useFxRate'
-import { Lease, Store, Payment } from '@/types'
+import { Lease, Store, Payment, StoreEnquiry } from '@/types'
 import Pill from '@/components/ui/Pill'
 import Btn from '@/components/ui/Btn'
 import Avatar from '@/components/ui/Avatar'
@@ -18,7 +18,7 @@ function useTenantData(userId: string | undefined) {
     queryKey: ['tenant-home', userId],
     enabled: !!userId,
     queryFn: async () => {
-      const [{ data: leaseData }, { data: payments }] = await Promise.all([
+      const [{ data: leaseData }, { data: payments }, { data: enquiries }] = await Promise.all([
         supabase
           .from('leases')
           .select('*, store:stores(*)')
@@ -31,14 +31,28 @@ function useTenantData(userId: string | undefined) {
           .eq('tenant_id', userId!)
           .order('created_at', { ascending: false })
           .limit(5),
+        // Store requests this user sent while signed in
+        supabase
+          .from('store_enquiries')
+          .select('*, store:stores(id, code, name, rent_usd, status)')
+          .eq('user_id', userId!)
+          .order('created_at', { ascending: false })
+          .limit(10),
       ])
       return {
         lease: leaseData as TenantLease | null,
         recentPayments: (payments ?? []) as Payment[],
+        requests: (enquiries ?? []) as StoreEnquiry[],
       }
     },
     staleTime: 30_000,
   })
+}
+
+const REQUEST_STATUS: Record<StoreEnquiry['status'], { label: string; tone: 'gold' | 'navy' | 'mint'; hint: string }> = {
+  new:       { label: 'Sent',      tone: 'gold', hint: 'Waiting for the office to review' },
+  read:      { label: 'Seen',      tone: 'navy', hint: 'The office has seen your request' },
+  contacted: { label: 'Contacted', tone: 'mint', hint: 'The office has reached out to you' },
 }
 
 function dueStatus(lease: TenantLease, payments: Payment[]) {
@@ -59,7 +73,7 @@ export default function TenantHome() {
   const toLrd = (usd: number) => toLrdFn(usd, fxRate)
   const { data, isLoading } = useTenantData(profile?.id)
 
-  const { lease, recentPayments = [] } = data ?? {}
+  const { lease, recentPayments = [], requests = [] } = data ?? {}
 
   const due = lease ? dueStatus(lease, recentPayments) : null
 
@@ -117,12 +131,65 @@ export default function TenantHome() {
               background: 'rgba(255,255,255,0.04)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.08)',
               padding: '20px', textAlign: 'center',
             }}>
-              <div style={{ fontSize: 13, color: 'rgba(246,241,228,0.55)' }}>No active lease found.</div>
-              <div style={{ fontSize: 12, color: 'rgba(246,241,228,0.35)', marginTop: 4 }}>Contact your landlord for assistance.</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(246,241,228,0.85)' }}>You don't have a store yet.</div>
+              <div style={{ fontSize: 12, color: 'rgba(246,241,228,0.5)', marginTop: 4, lineHeight: 1.5 }}>
+                Browse the available stores and send a request. Once the office assigns you a store, you'll pay rent from here.
+              </div>
+              <Btn kind="crimson" size="sm" style={{ marginTop: 14 }} onClick={() => navigate('/stores')}>
+                Browse available stores →
+              </Btn>
             </div>
           )}
         </div>
       </div>
+
+      {/* Store requests — shown to anyone who has sent one, and to anyone without a store */}
+      {!isLoading && (requests.length > 0 || !lease) && (
+        <div style={{ padding: '20px 20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gr-stone-2)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>My Store Requests</div>
+            <button type="button" onClick={() => navigate('/stores')} style={{ fontSize: 12, color: 'var(--gr-crimson)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+              Browse stores →
+            </button>
+          </div>
+          {requests.length === 0 ? (
+            <div style={{ padding: '16px', borderRadius: 12, background: '#fff', border: '1px solid var(--gr-line)', fontSize: 13, color: 'var(--gr-stone-2)', lineHeight: 1.5 }}>
+              You haven't requested a store yet. Requests you send while signed in will appear here.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {requests.map(rq => {
+                const st = REQUEST_STATUS[rq.status] ?? REQUEST_STATUS.new
+                return (
+                  <button
+                    type="button"
+                    key={rq.id}
+                    onClick={() => rq.store?.id && navigate(`/stores/${rq.store.id}`)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                      padding: '14px 16px', borderRadius: 12, background: '#fff', border: '1px solid var(--gr-line)',
+                      textAlign: 'left', cursor: 'pointer', width: '100%',
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gr-ink)' }}>
+                        {rq.store ? `${rq.store.code} · ${rq.store.name}` : 'Store no longer listed'}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--gr-stone-2)', marginTop: 2 }}>
+                        {rq.store ? `$${rq.store.rent_usd.toLocaleString()}/mo · ` : ''}Sent {format(parseISO(rq.created_at), 'dd MMM yyyy')}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--gr-stone-2)', marginTop: 2 }}>
+                        {rq.store?.status === 'occupied' && !lease ? 'This store has since been taken' : st.hint}
+                      </div>
+                    </div>
+                    <Pill tone={st.tone} style={{ flexShrink: 0, fontSize: 11 }}>{st.label}</Pill>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Quick actions */}
       <div style={{ padding: '20px 20px 0' }}>

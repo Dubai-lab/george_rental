@@ -101,13 +101,14 @@ export interface MaintenanceRequest {
 export interface StoreEnquiry {
   id:         string
   store_id:   string
+  user_id:    string | null
   name:       string
   email:      string | null
   phone:      string | null
   message:    string | null
   status:     'new' | 'read' | 'contacted'
   created_at: string
-  store?:     Pick<Store, 'code' | 'name' | 'rent_usd'> | null
+  store?:     Pick<Store, 'code' | 'name' | 'rent_usd'> & Partial<Pick<Store, 'id' | 'status'>> | null
 }
 
 export interface FxRate {

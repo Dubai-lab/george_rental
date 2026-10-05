@@ -94,7 +94,7 @@ export default function RecordPaymentModal({ onClose }: Props) {
         amount_lrd:      amountLrd,
         fx_rate:         fxRate,
         method:          values.method,
-        period_month:    format(startOfMonth(new Date()), 'yyyy-MM-dd'),
+        period_month:    format(startOfMonth(new Date()), 'yyyy-MM'),
         transaction_ref: values.transaction_ref || null,
         proof_url,
         status:          'pending',

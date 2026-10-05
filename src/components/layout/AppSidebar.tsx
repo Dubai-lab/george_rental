@@ -129,7 +129,7 @@ export default function AppSidebar({ storeBadge, tenantBadge, maintenanceBadge, 
       <div style={{ margin: '8px 12px', padding: 14, background: 'rgba(246,241,228,0.04)', borderRadius: 10, border: '1px solid rgba(246,241,228,0.06)' }}>
         <div style={{ fontSize: 10, color: 'rgba(246,241,228,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>Exchange rate</span>
-          <button onClick={() => setFxOpen(v => !v)} style={{ background: 'none', border: 'none', color: 'rgba(246,241,228,0.5)', cursor: 'pointer', padding: 0 }}>
+          <button type="button" aria-label="Edit exchange rate" onClick={() => setFxOpen(v => !v)} style={{ background: 'none', border: 'none', color: 'rgba(246,241,228,0.5)', cursor: 'pointer', padding: 0 }}>
             <IconSettings size={11} stroke="currentColor" />
           </button>
         </div>
@@ -170,7 +170,7 @@ export default function AppSidebar({ storeBadge, tenantBadge, maintenanceBadge, 
           <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.full_name ?? 'Owner'}</div>
           <div style={{ color: 'rgba(246,241,228,0.5)', fontSize: 11 }}>Owner</div>
         </div>
-        <button onClick={handleSignOut} style={{ background: 'none', border: 'none', color: 'rgba(246,241,228,0.5)', cursor: 'pointer', padding: 4 }}
+        <button type="button" aria-label="Sign out" onClick={handleSignOut} style={{ background: 'none', border: 'none', color: 'rgba(246,241,228,0.5)', cursor: 'pointer', padding: 4 }}
           title="Sign out">
           <IconLogout size={14} stroke="currentColor" />
         </button>

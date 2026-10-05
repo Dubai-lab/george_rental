@@ -104,7 +104,7 @@ export default function SignIn() {
                 style={{ ...inputStyle, paddingRight: 48, borderColor: errors.password ? 'var(--gr-crimson)' : 'var(--gr-line)' }}
               />
               <button
-                type="button"
+                type="button" aria-label={showPw ? 'Hide password' : 'Show password'}
                 onClick={() => setShowPw(v => !v)}
                 style={{
                   position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',

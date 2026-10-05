@@ -222,7 +222,7 @@ export default function Maintenance() {
               <div style={{ background: 'var(--gr-midnight)', padding: '24px 28px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                   <div style={{ fontSize: 11, color: 'rgba(246,241,228,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Maintenance Request</div>
-                  <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(246,241,228,0.6)', padding: 0 }}>
+                  <button type="button" aria-label="Close" onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(246,241,228,0.6)', padding: 0 }}>
                     <IconClose size={20} />
                   </button>
                 </div>

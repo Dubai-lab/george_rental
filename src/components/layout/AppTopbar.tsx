@@ -134,7 +134,7 @@ export default function AppTopbar({
       {/* Bell + dropdown */}
       <div ref={bellRef} style={{ position: 'relative' }}>
         <button
-          type="button"
+          type="button" aria-label="Notifications"
           onClick={() => setBellOpen(v => !v)}
           style={{
             width: 38, height: 38, borderRadius: 10,

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { openPrivateFile } from '@/lib/privateFile'
 import { Lease, Store } from '@/types'
 import Avatar from '@/components/ui/Avatar'
 import { IconPhone, IconMail, IconStore, IconLogout, IconCheck, IconClose, IconCalendar } from '@/components/ui/Icons'
@@ -114,6 +115,7 @@ export default function TenantProfile() {
                       style={{ flex: 1, height: 36, padding: '0 10px', borderRadius: 8, border: `1px solid ${phoneErr ? 'var(--gr-crimson)' : 'var(--gr-line)'}`, fontSize: 13, outline: 'none' }}
                     />
                     <button
+                      type="button" aria-label="Save phone number"
                       onClick={() => updatePhone.mutate(phone)}
                       disabled={updatePhone.isPending}
                       style={iconAction('var(--gr-mint)')}
@@ -121,6 +123,7 @@ export default function TenantProfile() {
                       <IconCheck size={14} stroke="#fff" />
                     </button>
                     <button
+                      type="button" aria-label="Cancel"
                       onClick={() => { setPhone(profile.phone ?? ''); setEditingPhone(false); setPhoneErr('') }}
                       style={iconAction('var(--gr-paper)', '1px solid var(--gr-line)')}
                     >
@@ -189,14 +192,13 @@ export default function TenantProfile() {
             )}
             {lease.agreement_url && (
               <div style={{ padding: '12px 18px', borderTop: '1px solid var(--gr-line)' }}>
-                <a
-                  href={lease.agreement_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontSize: 13, fontWeight: 600, color: 'var(--gr-crimson)', textDecoration: 'underline' }}
+                <button
+                  type="button"
+                  onClick={() => openPrivateFile(lease.agreement_url!)}
+                  style={{ padding: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--gr-crimson)', textDecoration: 'underline' }}
                 >
                   View Rental Agreement →
-                </a>
+                </button>
               </div>
             )}
           </div>
@@ -229,7 +231,11 @@ export default function TenantProfile() {
 
         <div style={{ textAlign: 'center', marginTop: 14 }}>
           <Link to="/privacy" style={{ fontSize: 11, color: 'var(--gr-stone-2)', textDecoration: 'none', borderBottom: '1px solid var(--gr-line)' }}>
-            Privacy Policy &amp; Terms of Service
+            Privacy Policy
+          </Link>
+          {' · '}
+          <Link to="/terms" style={{ fontSize: 11, color: 'var(--gr-stone-2)', textDecoration: 'none', borderBottom: '1px solid var(--gr-line)' }}>
+            Terms &amp; Refunds
           </Link>
         </div>
       </div>

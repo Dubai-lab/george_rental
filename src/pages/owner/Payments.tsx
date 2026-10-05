@@ -8,6 +8,7 @@ import { Payment, Lease, Store, Profile } from '@/types'
 import Pill from '@/components/ui/Pill'
 import Btn from '@/components/ui/Btn'
 import Avatar from '@/components/ui/Avatar'
+import PrivateImage from '@/components/ui/PrivateImage'
 import { IconSearch, IconCheck, IconClose, IconFile, IconDownload, IconPrinter } from '@/components/ui/Icons'
 
 type PaymentRow = Payment & {
@@ -252,7 +253,7 @@ export default function Payments() {
               <div style={{ background: 'var(--gr-midnight)', padding: '24px 28px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                   <div style={{ fontSize: 11, color: 'rgba(246,241,228,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Payment Detail</div>
-                  <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(246,241,228,0.6)', padding: 0 }}>
+                  <button type="button" aria-label="Close" onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(246,241,228,0.6)', padding: 0 }}>
                     <IconClose size={20} />
                   </button>
                 </div>
@@ -289,11 +290,10 @@ export default function Payments() {
                 {selected.proof_url && (
                   <div style={{ marginTop: 24 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gr-stone-2)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Payment Proof</div>
-                    <img
-                      src={selected.proof_url}
-                      alt="Payment proof"
-                      style={{ width: '100%', borderRadius: 10, border: '1px solid var(--gr-line)', display: 'block', cursor: 'zoom-in' }}
-                      onClick={() => window.open(selected.proof_url!, '_blank')}
+                    <PrivateImage
+                      url={selected.proof_url}
+                      alt={`Payment proof uploaded by ${selected.tenant?.full_name ?? 'tenant'}`}
+                      style={{ width: '100%', borderRadius: 10, border: '1px solid var(--gr-line)', display: 'block' }}
                     />
                   </div>
                 )}

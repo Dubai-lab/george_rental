@@ -315,7 +315,7 @@ export default function PayRent() {
               <div>
                 {paidThrough ? (
                   <>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gr-mint)' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gr-mint-text)' }}>
                       Rent paid through {format(paidThrough, 'MMMM d, yyyy')}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--gr-stone-2)', marginTop: 3 }}>
@@ -360,7 +360,7 @@ export default function PayRent() {
                 ))}
               </div>
               {monthsCount >= 3 && (
-                <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(47,184,117,0.08)', borderRadius: 8, fontSize: 12, color: 'var(--gr-mint)', fontWeight: 500 }}>
+                <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(47,184,117,0.08)', borderRadius: 8, fontSize: 12, color: 'var(--gr-mint-text)', fontWeight: 500 }}>
                   ✓ Covers {monthsCount} months — next rent due <strong>{format(noReminderUntil, 'MMMM d, yyyy')}</strong>
                 </div>
               )}
@@ -372,7 +372,7 @@ export default function PayRent() {
               {([
                 { id: 'mtn_momo',      label: 'MTN Mobile Money', sub: 'Dial *156# · most popular', badge: 'MTN',    badgeColor: '#FFC107' },
                 { id: 'orange_money',  label: 'Orange Money',      sub: 'Dial *144# · Orange wallet', badge: 'ORA',   badgeColor: '#FF6B00' },
-                { id: 'bank_transfer', label: 'Bank Transfer',     sub: 'LBDI · Ecobank · UBA',       badge: 'BANK',  badgeColor: 'var(--gr-navy)' },
+                { id: 'bank_transfer', label: 'Bank Transfer',     sub: 'Account details on next step',       badge: 'BANK',  badgeColor: 'var(--gr-navy)' },
               ] as { id: Method; label: string; sub: string; badge: string; badgeColor: string }[]).map(m => (
                 <label key={m.id} style={{
                   display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
@@ -380,7 +380,7 @@ export default function PayRent() {
                   background: method === m.id ? 'rgba(209,31,44,0.04)' : '#fff',
                   cursor: 'pointer', transition: 'all 0.15s',
                 }}>
-                  <input type="radio" style={{ display: 'none' }} checked={method === m.id} onChange={() => setMethod(m.id)} />
+                  <input type="radio" name="pay-method" className="sr-only" checked={method === m.id} onChange={() => setMethod(m.id)} />
                   <div style={{ width: 40, height: 40, borderRadius: 10, background: m.badgeColor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: m.badgeColor }}>{m.badge}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--gr-ink)' }}>{m.label}</div>
@@ -493,7 +493,7 @@ export default function PayRent() {
                     <div style={{ fontSize: 13, fontWeight: 500, color: proofFile ? 'var(--gr-mint)' : 'var(--gr-ink)' }}>{proofFile ? proofFile.name : 'Choose file…'}</div>
                     {!proofFile && <div style={{ fontSize: 11, color: 'var(--gr-stone-2)' }}>PNG, JPG, PDF up to 5 MB</div>}
                   </div>
-                  <input type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={e => setProofFile(e.target.files?.[0] ?? null)} />
+                  <input type="file" accept="image/*,.pdf" className="sr-only" onChange={e => setProofFile(e.target.files?.[0] ?? null)} />
                 </label>
               </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>

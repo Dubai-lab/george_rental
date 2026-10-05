@@ -8,6 +8,7 @@ import StoreThumb from '@/components/ui/StoreThumb'
 import Btn from '@/components/ui/Btn'
 import { IconSearch, IconDots, IconClose } from '@/components/ui/Icons'
 import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN ?? ''
 
@@ -161,7 +162,7 @@ function StoreForm({ areas, initial, onClose, onSaved }: StoreFormProps) {
               {isEdit ? `Editing ${initial!.code}` : 'Fill in the store details below'}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr-stone-2)', padding: 4 }}>
+          <button type="button" aria-label="Close" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr-stone-2)', padding: 4 }}>
             <IconClose size={18} stroke="currentColor" />
           </button>
         </div>
@@ -266,14 +267,14 @@ function StoreForm({ areas, initial, onClose, onSaved }: StoreFormProps) {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
                 {photos.map((url, i) => (
                   <div key={url} style={{ position: 'relative', width: 80, height: 60, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--gr-line)' }}>
-                    <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={url} alt={`Store photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     {i === 0 && (
                       <div style={{ position: 'absolute', top: 2, left: 2, background: 'rgba(6,9,20,0.7)', borderRadius: 4, padding: '1px 5px', fontSize: 9, color: '#fff', fontWeight: 700 }}>
                         COVER
                       </div>
                     )}
                     <button
-                      type="button"
+                      type="button" aria-label={`Remove photo ${i + 1}`}
                       onClick={() => removePhoto(url)}
                       style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: 99, background: 'rgba(209,31,44,0.85)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
@@ -388,7 +389,7 @@ function StoreMenu({ store, onEdit, onToggle, onDelete }: { store: StoreWithArea
 
   return (
     <div ref={wrapRef}>
-      <button ref={btnRef} onClick={handleOpen} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr-stone-2)', padding: 4, borderRadius: 6 }}>
+      <button type="button" aria-label={`Actions for ${store.code}`} ref={btnRef} onClick={handleOpen} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr-stone-2)', padding: 4, borderRadius: 6 }}>
         <IconDots size={16} stroke="currentColor" />
       </button>
       <AnimatePresence>

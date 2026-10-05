@@ -29,7 +29,7 @@ function useStore(id: string) {
 }
 
 // ── Photo gallery ────────────────────────────────────────────────
-function PhotoGallery({ photos, videoUrl }: { photos: string[]; videoUrl?: string | null }) {
+function PhotoGallery({ photos, videoUrl, storeName }: { photos: string[]; videoUrl?: string | null; storeName: string }) {
   const [idx,      setIdx]      = useState(0)
   const [showVideo, setShowVideo] = useState(false)
 
@@ -54,6 +54,7 @@ function PhotoGallery({ photos, videoUrl }: { photos: string[]; videoUrl?: strin
         <div style={{ position: 'relative', height: 420, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <video
             src={videoUrl}
+            aria-label={`Video tour of ${storeName}`}
             controls
             autoPlay
             style={{ maxHeight: 420, maxWidth: '100%', display: 'block' }}
@@ -64,7 +65,7 @@ function PhotoGallery({ photos, videoUrl }: { photos: string[]; videoUrl?: strin
           <img
             key={idx}
             src={current}
-            alt=""
+            alt={`${storeName} — photo ${idx + 1} of ${all.length}`}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
           {/* Gradient overlay at bottom */}
@@ -74,12 +75,14 @@ function PhotoGallery({ photos, videoUrl }: { photos: string[]; videoUrl?: strin
           {all.length > 1 && (
             <>
               <button
+                type="button" aria-label="Previous photo"
                 onClick={() => setIdx(i => (i - 1 + all.length) % all.length)}
                 style={arrowBtn('left')}
               >
                 ‹
               </button>
               <button
+                type="button" aria-label="Next photo"
                 onClick={() => setIdx(i => (i + 1) % all.length)}
                 style={arrowBtn('right')}
               >
@@ -102,6 +105,7 @@ function PhotoGallery({ photos, videoUrl }: { photos: string[]; videoUrl?: strin
         <div style={{ display: 'flex', gap: 6, padding: '10px 16px', background: '#111', overflowX: 'auto' }}>
           {all.map((url, i) => (
             <button
+              type="button" aria-label={`Show photo ${i + 1}`}
               key={url}
               onClick={() => { setIdx(i); setShowVideo(false) }}
               style={{
@@ -110,11 +114,12 @@ function PhotoGallery({ photos, videoUrl }: { photos: string[]; videoUrl?: strin
                 padding: 0, cursor: 'pointer', overflow: 'hidden', background: 'none',
               }}
             >
-              <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={url} alt={`${storeName} — thumbnail ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </button>
           ))}
           {videoUrl && (
             <button
+              type="button" aria-label="Play video tour"
               onClick={() => setShowVideo(true)}
               style={{
                 flexShrink: 0, width: 60, height: 44, borderRadius: 6,
@@ -219,7 +224,7 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
 
       <div style={{ display: 'grid', gridTemplateColumns: formMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
         <div>
-          <label style={lbl}>Email <span style={{ fontWeight: 400, color: '#9E9893' }}>(optional)</span></label>
+          <label style={lbl}>Email <span style={{ fontWeight: 400, color: '#6E6755' }}>(optional)</span></label>
           <input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" type="email" style={inp} />
         </div>
         <div>
@@ -229,7 +234,7 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
       </div>
 
       <div>
-        <label style={lbl}>Message <span style={{ fontWeight: 400, color: '#9E9893' }}>(optional)</span></label>
+        <label style={lbl}>Message <span style={{ fontWeight: 400, color: '#6E6755' }}>(optional)</span></label>
         <textarea
           value={message}
           onChange={e => setMessage(e.target.value)}
@@ -251,11 +256,12 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
         {submitting ? 'Submitting…' : 'Submit enquiry'}
       </button>
 
-      <p style={{ fontSize: 12, color: '#9E9893', margin: 0, textAlign: 'center', lineHeight: 1.6 }}>
-        By submitting you agree to be contacted by George Rental regarding this property.
+      <p style={{ fontSize: 12, color: '#6E6755', margin: 0, textAlign: 'center', lineHeight: 1.6 }}>
+        By submitting you agree to be contacted by George Rental about this property. We use your details only for that — see our{' '}
+        <Link to="/privacy" style={{ color: '#6E6755', textDecoration: 'underline' }}>Privacy Policy</Link>.
       </p>
       {!user && (
-        <p style={{ fontSize: 12, color: '#9E9893', margin: 0, textAlign: 'center', lineHeight: 1.6 }}>
+        <p style={{ fontSize: 12, color: '#6E6755', margin: 0, textAlign: 'center', lineHeight: 1.6 }}>
           No account needed. Want to track your requests?{' '}
           <Link to="/sign-up" style={{ color: '#D11F2C', fontWeight: 600 }}>Create a free account</Link>
           {' '}or <Link to="/sign-in" style={{ color: '#D11F2C', fontWeight: 600 }}>sign in</Link> first.
@@ -277,7 +283,7 @@ function SuccessBanner({ hadEmail, tracked, onClose }: { hadEmail: boolean; trac
         position: 'relative',
       }}
     >
-      <button onClick={onClose} style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 18 }}>
+      <button type="button" aria-label="Dismiss" onClick={onClose} style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 18 }}>
         ×
       </button>
       <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
@@ -361,7 +367,7 @@ export default function StoreDetail() {
       {!isLoading && store && (
         <>
           {/* Photo / Video gallery */}
-          <PhotoGallery photos={photos} videoUrl={store.video_url} />
+          <PhotoGallery photos={photos} videoUrl={store.video_url} storeName={store.name} />
 
           {/* Content grid */}
           <div style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '24px 16px 48px' : '40px 24px 60px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 400px', gap: isMobile ? 24 : 32, alignItems: 'start' }}>
@@ -402,7 +408,7 @@ export default function StoreDetail() {
                   </div>
                 </div>
                 {store.status === 'vacant' && (
-                  <div style={{ fontSize: 13, color: 'var(--gr-mint)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ fontSize: 13, color: '#5FD39A', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                     ✓ Available now
                   </div>
                 )}
@@ -475,7 +481,7 @@ export default function StoreDetail() {
                   </div>
                 ))}
                 <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--gr-paper)', borderRadius: 8, fontSize: 12, color: 'var(--gr-stone-2)', lineHeight: 1.5 }}>
-                  📍 George Rental Office<br />Broad Street, Central Monrovia, Liberia
+                  📍 George Rental Office<br />Bob Taylor Road, Red Light, Paynesville, Liberia
                 </div>
               </div>
 

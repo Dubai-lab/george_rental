@@ -559,15 +559,16 @@ create policy "tenant_invites: owner manages" on public.tenant_invites
 
 -- ───────────────────────────────────────────────────────────────────────────
 -- 5. STORAGE
--- All three buckets are public-read because the app stores and displays
--- getPublicUrl() links. Uploading is restricted below.
+-- store-photos is public (it feeds the public listing). payment-proofs and
+-- lease-agreements are PRIVATE: they hold personal information, so the app
+-- opens them through short-lived signed links, which the policies below gate.
 -- ───────────────────────────────────────────────────────────────────────────
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values
-  ('payment-proofs',   'payment-proofs',   true, 10485760, array['image/*', 'application/pdf']),
+  ('payment-proofs',   'payment-proofs',   false, 10485760, array['image/*', 'application/pdf']),
   ('store-photos',     'store-photos',     true, null,     array['image/*', 'video/*']),
-  ('lease-agreements', 'lease-agreements', true, 10485760, array['image/*', 'application/pdf'])
+  ('lease-agreements', 'lease-agreements', false, 10485760, array['image/*', 'application/pdf'])
 on conflict (id) do update
   set public             = excluded.public,
       file_size_limit    = excluded.file_size_limit,
@@ -582,7 +583,29 @@ create policy "proofs: tenant uploads to own folder" on storage.objects
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
 
--- The owner can upload / replace / delete in all three buckets.
+-- Tenants can open their own proofs …
+drop policy if exists "proofs: tenant reads own folder" on storage.objects;
+create policy "proofs: tenant reads own folder" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'payment-proofs'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+-- … and the agreement for their own lease (files are stored as <lease id>/…).
+drop policy if exists "agreements: tenant reads own lease" on storage.objects;
+create policy "agreements: tenant reads own lease" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'lease-agreements'
+    and exists (
+      select 1 from public.leases l
+      where l.id::text    = (storage.foldername(name))[1]
+        and l.tenant_id   = (select auth.uid())
+    )
+  );
+
+-- The owner can read / upload / replace / delete in all three buckets.
 drop policy if exists "storage: owner manages app buckets" on storage.objects;
 create policy "storage: owner manages app buckets" on storage.objects
   for all to authenticated

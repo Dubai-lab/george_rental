@@ -110,8 +110,8 @@ export default function RecordPaymentModal({ onClose }: Props) {
   })
 
   const methodOptions = [
-    { id: 'mtn_momo',      label: 'MTN MoMo',       sub: '+231 88 658 8543',     bg: '#FFCC00', fg: '#0B1A3D', logo: 'MTN'  },
-    { id: 'bank_transfer', label: 'Bank transfer',   sub: 'Acct · 111 222 333 4445', bg: '#0B1A3D', fg: '#fff',    logo: 'LBDI' },
+    { id: 'mtn_momo',      label: 'MTN MoMo',       sub: 'Mobile money',     bg: '#FFCC00', fg: '#0B1A3D', logo: 'MTN'  },
+    { id: 'bank_transfer', label: 'Bank transfer',   sub: 'Any bank account', bg: '#0B1A3D', fg: '#fff',    logo: 'LBDI' },
     { id: 'cash',          label: 'Cash',             sub: 'Paid in person',      bg: '#FBF7EC', fg: '#0B1A3D', logo: '$'    },
   ]
 
@@ -188,7 +188,7 @@ export default function RecordPaymentModal({ onClose }: Props) {
               </h2>
             )}
           </div>
-          <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid var(--gr-line)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <button type="button" aria-label="Close" onClick={onClose} style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid var(--gr-line)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
             <IconClose size={16} stroke="var(--gr-stone)" />
           </button>
         </div>
@@ -232,7 +232,7 @@ export default function RecordPaymentModal({ onClose }: Props) {
                       border: sel ? '2px solid var(--gr-crimson)' : '1px solid var(--gr-line)',
                       position: 'relative', display: 'block',
                     }}>
-                      <input type="radio" value={opt.id} {...register('method')} style={{ display: 'none' }} />
+                      <input type="radio" value={opt.id} {...register('method')} className="sr-only" />
                       {sel && (
                         <span style={{ position: 'absolute', top: 12, right: 12, width: 18, height: 18, borderRadius: 99, background: 'var(--gr-crimson)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                           <IconCheck size={11} stroke="#fff" />
@@ -287,7 +287,7 @@ export default function RecordPaymentModal({ onClose }: Props) {
                 border: `1.5px dashed ${proofFile ? 'var(--gr-mint)' : 'rgba(11,26,61,0.18)'}`,
                 borderRadius: 12, background: 'var(--gr-paper)', cursor: 'pointer',
               }}>
-                <input type="file" accept="image/*,.pdf" style={{ display: 'none' }}
+                <input type="file" accept="image/*,.pdf" className="sr-only"
                   onChange={e => {
                     const f = e.target.files?.[0]
                     if (f) { setProofFile(f); setProofUrl(null) }
@@ -302,7 +302,7 @@ export default function RecordPaymentModal({ onClose }: Props) {
                     <>
                       <div style={{ fontFamily: 'var(--f-mono)', fontSize: 13, fontWeight: 600, color: 'var(--gr-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{proofFile.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--gr-stone-2)', marginTop: 4 }}>{(proofFile.size / 1024).toFixed(0)} KB · ready to upload</div>
-                      <div style={{ marginTop: 6, fontSize: 12, color: 'var(--gr-mint)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ marginTop: 6, fontSize: 12, color: 'var(--gr-mint-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <IconCheck size={13} stroke="var(--gr-mint)" /> Proof attached
                       </div>
                     </>

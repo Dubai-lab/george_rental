@@ -8,6 +8,7 @@ import Pill from '@/components/ui/Pill'
 import Btn from '@/components/ui/Btn'
 import { IconSearch, IconUserPlus, IconPhone, IconMail, IconStore, IconClose, IconCheck } from '@/components/ui/Icons'
 import InviteTenantModal from '@/components/modals/InviteTenantModal'
+import { openPrivateFile } from '@/lib/privateFile'
 
 type TenantRow = Profile & {
   lease: (Lease & { store: Pick<Store, 'code' | 'name' | 'address'> }) | null
@@ -262,7 +263,7 @@ export default function Tenants() {
               <div style={{ background: 'var(--gr-midnight)', padding: '24px 28px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                   <div style={{ fontSize: 12, color: 'rgba(246,241,228,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Tenant Detail</div>
-                  <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(246,241,228,0.6)', padding: 0 }}>
+                  <button type="button" aria-label="Close" onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(246,241,228,0.6)', padding: 0 }}>
                     <IconClose size={20} />
                   </button>
                 </div>
@@ -381,14 +382,13 @@ export default function Tenants() {
                       </button>
                     </div>
                     {agreementUrl && (
-                      <a
-                        href={agreementUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ display: 'block', marginTop: 10, fontSize: 12, color: 'var(--gr-crimson)', fontWeight: 600, textDecoration: 'underline' }}
+                      <button
+                        type="button"
+                        onClick={() => openPrivateFile(agreementUrl)}
+                        style={{ display: 'block', marginTop: 10, padding: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--gr-crimson)', fontWeight: 600, textDecoration: 'underline' }}
                       >
                         View uploaded agreement →
-                      </a>
+                      </button>
                     )}
                   </Section>
                 )}

@@ -191,7 +191,9 @@ export default function SignUp() {
             </div>
             <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--gr-stone-2)', lineHeight: 1.6 }}>
               By creating an account you agree to our{' '}
-              <Link to="/privacy" style={{ color: 'var(--gr-stone-2)', textDecoration: 'underline' }}>Privacy Policy &amp; Terms</Link>.
+              <Link to="/terms" style={{ color: 'var(--gr-stone-2)', textDecoration: 'underline' }}>Terms</Link>
+              {' '}and{' '}
+              <Link to="/privacy" style={{ color: 'var(--gr-stone-2)', textDecoration: 'underline' }}>Privacy Policy</Link>.
               <br />
               <Link to="/" style={{ color: 'var(--gr-stone-2)', fontWeight: 500, textDecoration: 'none' }}>← Back to home</Link>
             </div>

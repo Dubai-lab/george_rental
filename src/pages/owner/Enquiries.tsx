@@ -77,7 +77,7 @@ export default function Enquiries() {
         {[
           { label: 'Total enquiries', value: enquiries.length,            color: 'var(--gr-ink)' },
           { label: 'New / unread',    value: counts.new,                  color: 'var(--gr-crimson)' },
-          { label: 'Contacted',       value: counts.contacted,            color: 'var(--gr-mint)' },
+          { label: 'Contacted',       value: counts.contacted,            color: 'var(--gr-mint-text)' },
           { label: 'Stores enquired', value: new Set(enquiries.map(e => e.store_id)).size, color: 'var(--gr-navy)' },
         ].map(s => (
           <div key={s.label} style={{ flex: 1, background: '#fff', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--gr-line)' }}>

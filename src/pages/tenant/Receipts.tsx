@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Payment } from '@/types'
 import Pill from '@/components/ui/Pill'
+import PrivateImage from '@/components/ui/PrivateImage'
 import { IconCheck, IconClock, IconAlert, IconFile, IconDownload } from '@/components/ui/Icons'
 import { periodRangeLabel } from './PayRent'
 
@@ -133,11 +134,10 @@ export default function Receipts() {
                     </div>
                   </div>
                   {r.proof_url && (
-                    <img
-                      src={r.proof_url}
-                      alt="Payment proof"
-                      style={{ width: '100%', borderRadius: 8, border: '1px solid var(--gr-line)', display: 'block', marginTop: 8, cursor: 'zoom-in' }}
-                      onClick={() => window.open(r.proof_url!, '_blank')}
+                    <PrivateImage
+                      url={r.proof_url}
+                      alt="Your uploaded payment proof"
+                      style={{ width: '100%', borderRadius: 8, border: '1px solid var(--gr-line)', display: 'block', marginTop: 8 }}
                     />
                   )}
                 </div>
@@ -146,7 +146,7 @@ export default function Receipts() {
               {/* Pending / Rejected messages */}
               {r.status === 'pending' && (
                 <div style={{ padding: '12px 18px', background: 'rgba(233,185,73,0.05)', fontSize: 12, color: 'var(--gr-stone-2)' }}>
-                  Awaiting confirmation from your landlord. Usually within 24 hours.
+                  Awaiting confirmation from the office.
                 </div>
               )}
               {r.status === 'rejected' && (

@@ -150,7 +150,7 @@ export default function AcceptInvite() {
                   {...register('password', { required: true, minLength: { value: 8, message: 'Min 8 characters' } })}
                   style={inputStyle}
                 />
-                <button type="button" onClick={() => setShowPw(v => !v)} style={eyeBtn}>
+                <button type="button" aria-label={showPw ? 'Hide password' : 'Show password'} onClick={() => setShowPw(v => !v)} style={eyeBtn}>
                   {showPw ? <IconEyeOff size={16} /> : <IconEye size={16} />}
                 </button>
               </div>

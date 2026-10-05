@@ -121,7 +121,9 @@ function DesktopLayout() {
 
       <footer style={{ borderTop: '1px solid var(--gr-line)', padding: '18px 32px', textAlign: 'center', fontSize: 12, color: 'var(--gr-stone-2)' }}>
         George Rental · +231 88 605 5575 ·{' '}
-        <Link to="/privacy" style={{ color: 'var(--gr-stone-2)', textDecoration: 'underline' }}>Privacy Policy &amp; Terms</Link>
+        <Link to="/privacy" style={{ color: 'var(--gr-stone-2)', textDecoration: 'underline' }}>Privacy</Link>
+        {' · '}
+        <Link to="/terms" style={{ color: 'var(--gr-stone-2)', textDecoration: 'underline' }}>Terms &amp; Refunds</Link>
       </footer>
     </div>
   )

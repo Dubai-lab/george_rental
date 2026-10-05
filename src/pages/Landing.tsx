@@ -1,21 +1,34 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import GRLogo from '@/components/ui/GRLogo'
 import { IconArrow } from '@/components/ui/Icons'
 import { useWindowWidth } from '@/hooks/useWindowWidth'
 
-const STATS = [
-  { k: '50',      l: 'storefronts you can find' },
-  { k: '2 min',   l: 'to pay & get a receipt'   },
-  { k: '24/7',    l: 'access from any browser'  },
-  { k: 'Android', l: 'app arriving soon'         },
-]
 
 export default function Landing() {
   const w = useWindowWidth()
   const isMobile = w < 640
   const [menuOpen, setMenuOpen] = useState(false)
+
+  // Real number of listed stores — never a hard-coded figure
+  const { data: storeCount } = useQuery<number>({
+    queryKey: ['public-store-count'],
+    queryFn: async () => {
+      const { count } = await supabase.from('stores').select('id', { count: 'exact', head: true })
+      return count ?? 0
+    },
+    staleTime: 300_000,
+  })
+
+  const STATS = [
+    { k: storeCount != null ? String(storeCount) : '—', l: storeCount === 1 ? 'store listed' : 'stores listed' },
+    { k: 'Free',   l: 'to create an account'        },
+    { k: 'MoMo',   l: 'Orange Money & bank accepted' },
+    { k: 'Online', l: 'receipts for every payment'   },
+  ]
 
   return (
     <div style={{
@@ -75,7 +88,7 @@ export default function Landing() {
             {/* Hamburger (mobile only) */}
             {isMobile && (
               <button
-                type="button"
+                type="button" aria-label="Menu" aria-expanded={menuOpen}
                 onClick={() => setMenuOpen(v => !v)}
                 style={{
                   background: 'rgba(246,241,228,0.08)', border: '1px solid rgba(246,241,228,0.15)',
@@ -187,8 +200,8 @@ export default function Landing() {
             marginTop: 24, maxWidth: isMobile ? '100%' : 520, fontSize: isMobile ? 16 : 18, lineHeight: 1.55,
             color: 'rgba(246,241,228,0.72)', fontWeight: 400,
           }}>
-            Pay your monthly rent through MTN MoMo or LBDI bank transfer, upload your proof, and
-            keep every receipt on your phone. From any phone, any browser — no app to install.
+            Pay your monthly rent by MTN MoMo, Orange Money or bank transfer, upload your proof, and
+            keep every receipt in one place. Works in the browser on any phone or computer.
           </p>
 
           <div style={{
@@ -224,7 +237,7 @@ export default function Landing() {
             <span>Payments via</span>
             <span style={{ fontFamily: 'var(--f-display)', fontWeight: 700, fontSize: 16, letterSpacing: '-0.02em', color: '#FFCC00' }}>MTN MoMo</span>
             <span style={{ width: 1, height: 18, background: 'rgba(246,241,228,0.18)', display: isMobile ? 'none' : 'block' }} />
-            <span style={{ fontFamily: 'var(--f-display)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em', color: 'var(--gr-cream)' }}>LBDI · Ecobank · UBA</span>
+            <span style={{ fontFamily: 'var(--f-display)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em', color: 'var(--gr-cream)' }}>Orange Money · Bank transfer</span>
           </div>
         </motion.div>
 
@@ -338,10 +351,11 @@ export default function Landing() {
           <div style={{ fontSize: 14, color: 'var(--gr-stone-2)', marginBottom: 32 }}>Common questions about renting from George Rental.</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[
-              { q: 'How do I pay my rent?', a: 'Sign in to your tenant account, go to "Pay Rent", choose MTN MoMo or bank transfer, enter the transaction reference, and upload your proof of payment. Your landlord will confirm within 24 hours.' },
-              { q: 'How do I get my receipt?', a: 'Once the owner confirms your payment, a receipt is automatically generated. You can view and download all your receipts from the "Receipts" tab after signing in.' },
+              { q: 'How do I pay my rent?', a: 'Sign in, go to "Pay Rent" and choose MTN MoMo, Orange Money or bank transfer. Send the money to the account shown, then enter the transaction reference and upload your proof of payment. The office checks it and confirms.' },
+              { q: 'How do I get my receipt?', a: 'Once the office confirms your payment, a receipt with its own number is created. You can see all your receipts under "Receipts" after signing in.' },
               { q: 'What if I don\'t have an account?', a: 'Anyone can create a free account — tap "Create account" at the top of this page. With an account you can request any available store and follow your requests. Once the office assigns you a store, the same account is used to pay rent and get receipts.' },
-              { q: 'What payment methods are accepted?', a: 'MTN Mobile Money (primary), bank transfer via LBDI, Ecobank, or UBA, and cash payments accepted at the office.' },
+              { q: 'What payment methods are accepted?', a: 'MTN Mobile Money, Orange Money and bank transfer. The exact account details are shown on the Pay Rent page after you sign in. Always check the account name before sending money.' },
+              { q: 'Can I get a refund?', a: 'If you pay twice or pay too much, tell the office and the extra is credited to your next rent or refunded. The full rules are in our Terms & Refund Policy, linked at the bottom of this page.' },
               { q: 'How do I report a maintenance issue?', a: 'Sign in and go to the "Maintenance" tab. Submit a request with a description and priority level. The management team will follow up.' },
             ].map(({ q, a }) => (
               <div key={q} style={{ padding: isMobile ? '16px 18px' : '20px 24px', borderRadius: 12, border: '1px solid var(--gr-line)', background: 'var(--gr-paper)' }}>
@@ -368,13 +382,13 @@ export default function Landing() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {[
-                { label: 'Office',  value: 'Broad Street, Central Monrovia, Liberia' },
+                { label: 'Office',  value: 'Bob Taylor Road, Red Light, Paynesville, Liberia' },
                 { label: 'Phone',   value: '+231 88 605 5575 / +231 77 056 7682' },
                 { label: 'Email',   value: 'eg8217178@gmail.com' },
                 { label: 'Hours',   value: 'Mon–Sat 8:00 AM – 6:00 PM' },
               ].map(({ label, value }) => (
                 <div key={label} style={{ display: 'flex', gap: 16 }}>
-                  <div style={{ width: 56, fontSize: 11, color: 'rgba(246,241,228,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: 2, flexShrink: 0 }}>{label}</div>
+                  <div style={{ width: 56, fontSize: 11, color: 'rgba(246,241,228,0.65)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: 2, flexShrink: 0 }}>{label}</div>
                   <div style={{ fontSize: 14, color: 'rgba(246,241,228,0.85)' }}>{value}</div>
                 </div>
               ))}
@@ -418,11 +432,12 @@ export default function Landing() {
           alignItems: isMobile ? 'flex-start' : 'center',
           gap: 12,
         }}>
-          <div style={{ fontSize: 12, color: 'rgba(246,241,228,0.35)' }}>© 2026 George Rental. All rights reserved.</div>
-          <div style={{ display: 'flex', gap: 20, fontSize: 12, color: 'rgba(246,241,228,0.35)', alignItems: 'center' }}>
-            <Link to="/stores" style={{ color: 'rgba(246,241,228,0.35)', textDecoration: 'none' }}>Stores</Link>
-            <a href="#help" style={{ color: 'rgba(246,241,228,0.35)', textDecoration: 'none' }}>Help</a>
-            <Link to="/privacy" style={{ color: 'rgba(246,241,228,0.35)', textDecoration: 'none' }}>Privacy Policy</Link>
+          <div style={{ fontSize: 12, color: 'rgba(246,241,228,0.7)' }}>© 2026 George Rental. All rights reserved.</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 20px', fontSize: 12, color: 'rgba(246,241,228,0.7)', alignItems: 'center' }}>
+            <Link to="/stores" style={{ color: 'rgba(246,241,228,0.7)', textDecoration: 'none' }}>Stores</Link>
+            <a href="#help" style={{ color: 'rgba(246,241,228,0.7)', textDecoration: 'none' }}>Help</a>
+            <Link to="/privacy" style={{ color: 'rgba(246,241,228,0.7)', textDecoration: 'none' }}>Privacy &amp; Cookies</Link>
+            <Link to="/terms" style={{ color: 'rgba(246,241,228,0.7)', textDecoration: 'none' }}>Terms &amp; Refunds</Link>
             <ComingSoonBadge label="Get Android App" icon="android" />
             <ComingSoonBadge label="Get iOS App" icon="apple" />
           </div>
@@ -440,7 +455,7 @@ function ComingSoonBadge({ label, icon }: { label: string; icon: 'android' | 'ap
         onClick={() => { setShow(true); setTimeout(() => setShow(false), 2000) }}
         type="button"
         style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-          color: 'rgba(246,241,228,0.35)', fontSize: 12, fontFamily: 'inherit',
+          color: 'rgba(246,241,228,0.7)', fontSize: 12, fontFamily: 'inherit',
           display: 'flex', alignItems: 'center', gap: 5 }}
       >
         {icon === 'android' ? (
@@ -487,7 +502,7 @@ function MiniStoresCard() {
     <div style={{ height: '100%', fontFamily: 'var(--f-body)', overflow: 'hidden' }}>
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--gr-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--gr-ink)' }}>All stores · Monrovia</div>
-        <div style={{ fontSize: 11, color: 'var(--gr-stone-2)' }}>50 properties</div>
+        <div style={{ fontSize: 11, color: 'var(--gr-stone-2)' }}>Sample view</div>
       </div>
       <div style={{ padding: 12, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
         {[0,1,2,3,4,5,6,7].map(i => (
@@ -531,7 +546,7 @@ function MiniReceiptCard() {
     <div style={{ height: '100%', padding: 18, fontFamily: 'var(--f-body)', color: 'var(--gr-ink)' }}>
       <div style={{ fontSize: 8, letterSpacing: '0.14em', color: 'var(--gr-stone-2)', textTransform: 'uppercase' }}>Receipt · GR-00428</div>
       <div style={{ marginTop: 8, fontFamily: 'var(--f-display)', fontWeight: 700, fontSize: 18, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
-        Rent paid<br /><span style={{ color: 'var(--gr-mint)' }}>in full ✓</span>
+        Rent paid<br /><span style={{ color: 'var(--gr-mint-text)' }}>in full ✓</span>
       </div>
       <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed rgba(11,26,61,0.18)', fontSize: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
         {[['Tenant','Mariama Kollie'],['Store','Broad St #12'],['Period','May 2026'],['Method','MTN MoMo']].map(([l,v]) => (

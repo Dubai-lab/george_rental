@@ -127,7 +127,7 @@ export default function TenantMaintenance() {
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gr-ink)' }}>New Maintenance Request</div>
-                    <button onClick={() => setFormOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr-stone-2)', padding: 0 }}>
+                    <button type="button" aria-label="Close" onClick={() => setFormOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr-stone-2)', padding: 0 }}>
                       <IconClose size={18} />
                     </button>
                   </div>
@@ -155,7 +155,7 @@ export default function TenantMaintenance() {
                       <div style={{ display: 'flex', gap: 8 }}>
                         {(['low', 'medium', 'high'] as const).map(p => (
                           <label key={p} style={{ flex: 1 }}>
-                            <input type="radio" value={p} {...register('priority')} style={{ display: 'none' }} />
+                            <input type="radio" value={p} {...register('priority')} className="sr-only" />
                             <div style={{
                               textAlign: 'center', padding: '8px 0', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 500,
                               border: `1px solid ${p === 'high' ? 'var(--gr-crimson)' : p === 'medium' ? 'var(--gr-gold)' : 'var(--gr-line)'}`,

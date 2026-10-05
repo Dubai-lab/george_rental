@@ -83,7 +83,7 @@ export default function PublicStores() {
             </Link>
             {isMobile && (
               <button
-                type="button"
+                type="button" aria-label="Menu" aria-expanded={menuOpen}
                 onClick={() => setMenuOpen(v => !v)}
                 style={{
                   background: 'rgba(246,241,228,0.08)', border: '1px solid rgba(246,241,228,0.15)',
@@ -152,8 +152,8 @@ export default function PublicStores() {
             Available Stores
           </div>
           <div style={{ fontSize: 14, color: 'rgba(246,241,228,0.6)', lineHeight: 1.6 }}>
-            Browse all {stores.length} George Rental storefronts across 4 areas in Monrovia.
-            {vacantCount > 0 && <> <span style={{ color: 'var(--gr-mint)', fontWeight: 600 }}>{vacantCount} currently vacant</span> and available for lease.</>}
+            Browse all {stores.length} George Rental storefront{stores.length === 1 ? '' : 's'}.
+            {vacantCount > 0 && <> <span style={{ color: '#5FD39A', fontWeight: 600 }}>{vacantCount} currently vacant</span> and available for lease.</>}
           </div>
 
           {/* Search */}
@@ -162,6 +162,7 @@ export default function PublicStores() {
             <input
               value={q}
               onChange={e => setQ(e.target.value)}
+              aria-label="Search stores"
               placeholder="Search by name, area, address…"
               style={{
                 width: '100%', height: 46, paddingLeft: 42, paddingRight: 16,
@@ -226,7 +227,7 @@ export default function PublicStores() {
                 {/* Thumbnail */}
                 <div style={{ height: 140, background: 'var(--gr-paper)', position: 'relative', overflow: 'hidden' }}>
                   {store.photo_url ? (
-                    <img src={store.photo_url} alt={store.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={store.photo_url} alt={`Photo of ${store.name}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <StoreThumb seed={i} w={100} h={100} />

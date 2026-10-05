@@ -123,18 +123,18 @@ function printReport(data: ReturnType<typeof useReports>['data'], fxRate: number
     .meta { text-align:right; font-size:12px; color:#6B6560; }
     .kpis { display:grid; grid-template-columns: repeat(4,1fr); gap:12px; margin-bottom:28px; }
     .kpi { border:1px solid #E5E0D5; border-radius:8px; padding:14px; background:#F9F7F3; }
-    .kpi-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#9E9893; margin-bottom:6px; }
+    .kpi-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#6E6755; margin-bottom:6px; }
     .kpi-value { font-size:22px; font-weight:800; color:#060914; }
     .kpi-sub { font-size:11px; color:#6B6560; margin-top:3px; }
     h2 { font-size:14px; font-weight:700; margin-bottom:12px; margin-top:24px; color:#060914; }
     table { width:100%; border-collapse:collapse; margin-bottom:24px; }
-    th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#9E9893; text-align:left; padding:8px 10px; background:#F9F7F3; border-bottom:1px solid #E5E0D5; }
+    th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#6E6755; text-align:left; padding:8px 10px; background:#F9F7F3; border-bottom:1px solid #E5E0D5; }
     td { padding:9px 10px; border-bottom:1px solid #E5E0D5; font-size:12px; color:#060914; }
     td.num { text-align:right; font-family:monospace; }
     .badge { display:inline-block; padding:2px 8px; border-radius:99px; font-size:10px; font-weight:700; }
     .badge-red { background:rgba(209,31,44,0.1); color:#D11F2C; }
     .badge-amber { background:rgba(233,185,73,0.15); color:#9A6F00; }
-    .footer { margin-top:32px; padding-top:16px; border-top:1px solid #E5E0D5; font-size:11px; color:#9E9893; }
+    .footer { margin-top:32px; padding-top:16px; border-top:1px solid #E5E0D5; font-size:11px; color:#6E6755; }
     @media print { body { padding:20px; } }
   </style>
 </head>
@@ -146,7 +146,7 @@ function printReport(data: ReturnType<typeof useReports>['data'], fxRate: number
     </div>
     <div class="meta">
       Generated: ${today}<br>
-      Broad Street, Central Monrovia, Liberia<br>
+      Bob Taylor Road, Red Light, Paynesville, Liberia<br>
       +231 88 605 5575
     </div>
   </div>

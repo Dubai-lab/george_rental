@@ -62,7 +62,7 @@ export default function Map() {
         {[
           { label: 'Total stores',  value: stores.length,  color: 'var(--gr-ink)' },
           { label: 'Occupied',      value: totalOccupied,  color: 'var(--gr-navy)' },
-          { label: 'Vacant',        value: totalVacant,    color: 'var(--gr-mint)' },
+          { label: 'Vacant',        value: totalVacant,    color: 'var(--gr-mint-text)' },
           { label: 'Areas',         value: Object.keys(byArea).length, color: 'var(--gr-crimson)' },
         ].map(s => (
           <div key={s.label} style={{

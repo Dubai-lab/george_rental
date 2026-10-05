@@ -20,7 +20,7 @@ const TITLES: Record<string, string> = {
 }
 
 const SUBTITLES: Record<string, string> = {
-  '/owner/stores':     '50 properties · 4 areas in Monrovia',
+  '/owner/stores':     'All properties, grouped by area',
   '/owner/reports':    'Income, arrears & occupancy across all stores',
   '/owner/tenants':    'All active and past tenants',
   '/owner/payments':   'All payment records',

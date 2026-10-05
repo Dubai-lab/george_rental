@@ -182,7 +182,11 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
     setErr(null)
     setSubmitting(true)
 
+    // We choose the id so we can hand it to the email function afterwards
+    // (visitors cannot read enquiries back from the database).
+    const enquiryId = crypto.randomUUID()
     const { error } = await supabase.from('store_enquiries').insert({
+      id:       enquiryId,
       store_id: store.id,
       user_id:  user?.id ?? null,
       name:     name.trim(),
@@ -198,12 +202,7 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
     }
 
     // Fire-and-forget email notification (non-blocking)
-    supabase.functions.invoke('notify-enquiry', {
-      body: {
-        store: { code: store.code, name: store.name, address: store.address, rent_usd: store.rent_usd },
-        enquiry: { name: name.trim(), email: email.trim() || null, phone: phone.trim() || null, message: message.trim() || null },
-      },
-    }).catch(() => {})
+    supabase.functions.invoke('notify-enquiry', { body: { enquiry_id: enquiryId } }).catch(() => {})
 
     setSubmitting(false)
     onSuccess(!!email.trim(), !!user)
@@ -219,7 +218,7 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
 
       <div>
         <label style={lbl}>Full name *</label>
-        <input value={name} onChange={e => setName(e.target.value)} placeholder="Your name" style={inp} required />
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="Your name" style={inp} required maxLength={120} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: formMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
@@ -229,7 +228,7 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
         </div>
         <div>
           <label style={lbl}>Phone *</label>
-          <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+231 88 605 5575" style={inp} required />
+          <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+231 88 605 5575" style={inp} required maxLength={40} />
         </div>
       </div>
 
@@ -240,6 +239,7 @@ function EnquiryForm({ store, onSuccess }: EnquiryFormProps) {
           onChange={e => setMessage(e.target.value)}
           placeholder="Tell us more about your needs, preferred lease length, business type, etc."
           rows={4}
+          maxLength={4000}
           style={{ ...inp, height: 'auto', padding: '10px 12px', resize: 'vertical' }}
         />
       </div>

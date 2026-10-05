@@ -13,6 +13,10 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN ?? ''
 
 type Filter = 'all' | 'paid' | 'due' | 'overdue' | 'vacant'
+
+function escHtml(v: unknown): string {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
+}
 type StoreWithArea = Store & { area: Area | null }
 
 // ── Store form modal ────────────────────────────────────────────
@@ -555,7 +559,7 @@ export default function Stores() {
         const marker = new mapboxgl.Marker({ element: el })
           .setLngLat([s.lng!, s.lat!])
           .setPopup(new mapboxgl.Popup({ offset: 16 }).setHTML(
-            `<div style="font-family:sans-serif;padding:2px 0"><b style="font-size:13px">${s.name}</b><br><span style="font-size:12px;color:#555">${s.code} · $${s.rent_usd}/mo</span><br><span style="font-size:12px;color:${color};font-weight:600">${label}</span></div>`
+            `<div style="font-family:sans-serif;padding:2px 0"><b style="font-size:13px">${escHtml(s.name)}</b><br><span style="font-size:12px;color:#555">${escHtml(s.code)} · $${Number(s.rent_usd)}/mo</span><br><span style="font-size:12px;color:${color};font-weight:600">${label}</span></div>`
           ))
           .addTo(m)
         markersRef.current.push(marker)

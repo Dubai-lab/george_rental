@@ -79,6 +79,8 @@ export default function Maintenance() {
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', id)
       if (error) throw error
+      // Email the tenant — non-blocking
+      supabase.functions.invoke('notify-maintenance', { body: { request_id: id, event: 'status_changed' } }).catch(() => {})
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['maintenance'] })

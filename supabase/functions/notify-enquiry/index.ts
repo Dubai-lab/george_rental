@@ -1,6 +1,9 @@
 // Supabase Edge Function — notify-enquiry
 // Uses SpaceMail SMTP (no third-party email service)
-// Called directly from the client after a store_enquiries insert.
+// Called by the visitor's browser right after it inserts a store_enquiries row,
+// with ONLY that row's id. Everything that goes into the emails is read from
+// the database, and each enquiry can trigger emails once — so this endpoint
+// cannot be used to send arbitrary email.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import nodemailer from 'npm:nodemailer@6'
@@ -14,6 +17,23 @@ const FROM      = `George Rental <${SMTP_USER}>`
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const supabase     = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// ── Security helpers ─────────────────────────────────────────────────────────
+// Escape anything user-supplied before it goes into email HTML.
+const esc = (v: unknown) =>
+  String(v ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!))
+
+// Who is calling? Returns their profile, or null for anonymous / invalid tokens.
+async function getCaller(req: Request): Promise<{ id: string; role: string } | null> {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (!token) return null
+  const { data } = await supabase.auth.getUser(token)
+  if (!data?.user) return null
+  const { data: profile } = await supabase
+    .from('profiles').select('id, role').eq('id', data.user.id).maybeSingle()
+  return profile
+}
+
 
 async function sendEmail(to: string, subject: string, html: string) {
   const transporter = nodemailer.createTransport({
@@ -35,13 +55,35 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { store, enquiry } = await req.json()
-    // store: { code, name, address, rent_usd }
-    // enquiry: { name, email, phone, message }
-
-    if (!store || !enquiry) {
-      return new Response('missing payload', { status: 400, headers: CORS })
+    const text = await req.text()
+    const { enquiry_id } = text?.trim() ? JSON.parse(text) : {}
+    if (typeof enquiry_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(enquiry_id)) {
+      return new Response('missing enquiry_id', { status: 400, headers: CORS })
     }
+
+    // Claim the enquiry: only a fresh one that has not been emailed yet
+    const { data: row } = await supabase
+      .from('store_enquiries')
+      .update({ notified_at: new Date().toISOString() })
+      .eq('id', enquiry_id)
+      .is('notified_at', null)
+      .gte('created_at', new Date(Date.now() - 15 * 60 * 1000).toISOString())
+      .select('name, email, phone, message, store:stores(code, name, address, rent_usd)')
+      .maybeSingle()
+
+    const s = row?.store as any
+    if (!row || !s) {
+      return new Response('nothing to send', { status: 404, headers: CORS })
+    }
+
+    const store = { code: esc(s.code), name: esc(s.name), address: s.address ? esc(s.address) : '', rent_usd: s.rent_usd }
+    const enquiry = {
+      name:    esc(row.name),
+      email:   row.email ? esc(row.email) : '',
+      phone:   row.phone ? esc(row.phone) : '',
+      message: row.message ? esc(row.message) : '',
+    }
+    const replyTo = row.email && /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(row.email) ? row.email : null
 
     // 1. Notify owner
     const { data: owner } = await supabase
@@ -84,9 +126,9 @@ Deno.serve(async (req) => {
     }
 
     // 2. Confirm to enquirer (only if they provided an email)
-    if (enquiry.email) {
+    if (replyTo) {
       await sendEmail(
-        enquiry.email,
+        replyTo,
         `Your enquiry for ${store.name} — George Rental`,
         emailWrapper(`
           <h2 style="margin:0 0 6px">Enquiry Received ✅</h2>
@@ -121,7 +163,7 @@ Deno.serve(async (req) => {
     })
   } catch (err) {
     console.error(err)
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: CORS })
+    return new Response(JSON.stringify({ error: 'failed to send' }), { status: 500, headers: CORS })
   }
 })
 

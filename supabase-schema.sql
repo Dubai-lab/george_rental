@@ -143,6 +143,11 @@ alter table public.store_enquiries
   add column if not exists user_id uuid references auth.users(id) on delete set null;
 create index if not exists store_enquiries_user_idx on public.store_enquiries (user_id);
 
+-- Set by the notify-enquiry function once it has emailed; stops the same
+-- enquiry being used to send email twice.
+alter table public.store_enquiries
+  add column if not exists notified_at timestamptz;
+
 create table if not exists public.fx_rates (
   id         uuid primary key default gen_random_uuid(),
   rate       numeric(10,2) not null check (rate > 0),
@@ -315,6 +320,37 @@ create trigger on_payment_write
   before insert or update on public.payments
   for each row execute function public.handle_payment_write();
 
+-- Rate limit for the public enquiry form (it is open to anonymous visitors):
+-- at most 40 enquiries an hour overall, and 3 a day from the same phone/email.
+create or replace function public.limit_enquiries()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if (select count(*) from public.store_enquiries
+       where created_at > now() - interval '1 hour') >= 40 then
+    raise exception 'We are receiving too many requests right now. Please try again later or call the office.';
+  end if;
+
+  if (select count(*) from public.store_enquiries e
+       where e.created_at > now() - interval '24 hours'
+         and ( (new.phone is not null and e.phone = new.phone)
+            or (new.email is not null and lower(e.email) = lower(new.email)) )) >= 3 then
+    raise exception 'You have already sent several requests today. Please call the office instead.';
+  end if;
+
+  new.notified_at := null;   -- only the email function may set this
+  return new;
+end;
+$$;
+
+drop trigger if exists on_enquiry_insert on public.store_enquiries;
+create trigger on_enquiry_insert
+  before insert on public.store_enquiries
+  for each row execute function public.limit_enquiries();
+
 create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
@@ -330,6 +366,34 @@ drop trigger if exists on_maintenance_update on public.maintenance_requests;
 create trigger on_maintenance_update
   before update on public.maintenance_requests
   for each row execute function public.touch_updated_at();
+
+
+-- ── Input limits ───────────────────────────────────────────────────────────
+-- Size caps on every free-text field a tenant or visitor can write, and
+-- proof links must be real https links (never javascript: or data: URLs).
+alter table public.profiles drop constraint if exists profiles_text_limits;
+alter table public.profiles add constraint profiles_text_limits check (
+  char_length(full_name) <= 120 and char_length(coalesce(phone, '')) <= 40
+);
+
+alter table public.payments drop constraint if exists payments_text_limits;
+alter table public.payments add constraint payments_text_limits check (
+  char_length(coalesce(transaction_ref, '')) <= 120
+  and char_length(coalesce(notes, '')) <= 2000
+  and (proof_url is null or (proof_url like 'https://%' and char_length(proof_url) <= 600))
+);
+
+alter table public.maintenance_requests drop constraint if exists maintenance_text_limits;
+alter table public.maintenance_requests add constraint maintenance_text_limits check (
+  char_length(title) between 1 and 200 and char_length(coalesce(description, '')) <= 4000
+);
+
+alter table public.leases drop constraint if exists leases_text_limits;
+alter table public.leases add constraint leases_text_limits check (
+  char_length(coalesce(business_name, '')) <= 160
+  and char_length(coalesce(business_type, '')) <= 160
+  and char_length(coalesce(lease_code, '')) <= 40
+);
 
 
 -- ───────────────────────────────────────────────────────────────────────────

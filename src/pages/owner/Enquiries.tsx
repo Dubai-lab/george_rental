@@ -220,13 +220,13 @@ export default function Enquiries() {
                   {/* Contact buttons + status actions */}
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     {enq.email && (
-                      <a href={`mailto:${enq.email}?subject=Re: Enquiry about ${enq.store?.name ?? 'store'}&body=Hi ${enq.name},%0D%0A%0D%0AThank you for your enquiry about ${enq.store?.name ?? 'our store'}.`}
+                      <a href={`mailto:${encodeURIComponent(enq.email)}?subject=${encodeURIComponent(`Re: Enquiry about ${enq.store?.name ?? 'store'}`)}&body=${encodeURIComponent(`Hi ${enq.name},\r\n\r\nThank you for your enquiry about ${enq.store?.name ?? 'our store'}.`)}`}
                         style={actionBtn('#0B1A3D', '#fff')}>
                         ✉️ Reply by email
                       </a>
                     )}
                     {enq.phone && (
-                      <a href={`tel:${enq.phone.replace(/\s/g, '')}`} style={actionBtn('var(--gr-paper)', 'var(--gr-ink)', '1px solid var(--gr-line)')}>
+                      <a href={`tel:${enq.phone.replace(/[^0-9+]/g, '')}`} style={actionBtn('var(--gr-paper)', 'var(--gr-ink)', '1px solid var(--gr-line)')}>
                         📞 Call {enq.phone}
                       </a>
                     )}

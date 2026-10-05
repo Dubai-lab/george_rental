@@ -18,6 +18,23 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const supabase     = createClient(SUPABASE_URL, SUPABASE_KEY)
 
+// ── Security helpers ─────────────────────────────────────────────────────────
+// Escape anything user-supplied before it goes into email HTML.
+const esc = (v: unknown) =>
+  String(v ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!))
+
+// Who is calling? Returns their profile, or null for anonymous / invalid tokens.
+async function getCaller(req: Request): Promise<{ id: string; role: string } | null> {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (!token) return null
+  const { data } = await supabase.auth.getUser(token)
+  if (!data?.user) return null
+  const { data: profile } = await supabase
+    .from('profiles').select('id, role').eq('id', data.user.id).maybeSingle()
+  return profile
+}
+
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -59,6 +76,11 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Owner only — this emails every tenant
+    const caller = await getCaller(req)
+    if (!caller) return new Response('not signed in', { status: 401, headers: CORS })
+    if (caller.role !== 'owner') return new Response('not allowed', { status: 403, headers: CORS })
+
     const text = await req.text()
     const { days_ahead = 7 } = text?.trim() ? JSON.parse(text) : {}
 
@@ -107,9 +129,9 @@ Deno.serve(async (req) => {
 
     for (const lease of leases as any[]) {
       const tenantEmail = lease.tenant?.email
-      const tenantName  = lease.tenant?.full_name ?? 'Tenant'
-      const storeName   = lease.store?.name ?? 'your store'
-      const storeCode   = lease.store?.code ?? ''
+      const tenantName  = esc(lease.tenant?.full_name ?? 'Tenant')
+      const storeName   = esc(lease.store?.name ?? 'your store')
+      const storeCode   = esc(lease.store?.code ?? '')
       const rent        = `$${Number(lease.monthly_rent_usd).toLocaleString()}`
 
       if (!tenantEmail) continue
@@ -192,7 +214,7 @@ Deno.serve(async (req) => {
     })
   } catch (err) {
     console.error(err)
-    return new Response(JSON.stringify({ error: String(err) }), {
+    return new Response(JSON.stringify({ error: 'failed to send' }), {
       status: 500, headers: { ...CORS, 'Content-Type': 'application/json' },
     })
   }

@@ -9,9 +9,14 @@ function parseStorageUrl(url: string): { bucket: string; path: string } | null {
   return m ? { bucket: m[1], path: decodeURIComponent(m[2]) } : null
 }
 
+const STORAGE_ORIGIN = (import.meta.env.VITE_SUPABASE_URL as string).replace(/\/$/, '')
+
 export async function getSignedUrl(url: string): Promise<string> {
-  const ref = parseStorageUrl(url)
-  if (!ref) return url
+  // The stored link is written by the uploader, so treat it as untrusted:
+  // only links into OUR storage are ever opened (never javascript:, data:, or
+  // another website).
+  const ref = url.startsWith(`${STORAGE_ORIGIN}/storage/v1/object/`) ? parseStorageUrl(url) : null
+  if (!ref) throw new Error('Not a George Rental file')
   const { data, error } = await supabase.storage.from(ref.bucket).createSignedUrl(ref.path, 60 * 60)
   if (error) throw error
   return data.signedUrl

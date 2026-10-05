@@ -71,7 +71,7 @@ export default function TenantMaintenance() {
 
       if (!lease) throw new Error('No active lease found')
 
-      const { error } = await supabase.from('maintenance_requests').insert({
+      const { data: created, error } = await supabase.from('maintenance_requests').insert({
         lease_id:    lease.id,
         tenant_id:   profile.id,
         store_id:    lease.store_id,
@@ -79,8 +79,12 @@ export default function TenantMaintenance() {
         description: values.description || null,
         priority:    values.priority,
         status:      'open',
-      })
+      }).select('id').single()
       if (error) throw error
+      // Email the office — non-blocking
+      if (created?.id) {
+        supabase.functions.invoke('notify-maintenance', { body: { request_id: created.id, event: 'created' } }).catch(() => {})
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-maintenance'] })

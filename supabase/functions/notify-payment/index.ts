@@ -1,6 +1,7 @@
 // Supabase Edge Function — notify-payment
 // Called directly from the frontend after payment events.
-// Uses SpaceMail SMTP — no third-party email service.
+// Caller must be signed in: the owner, or the tenant who owns the payment
+// (tenants may only announce their own new submission).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import nodemailer from 'npm:nodemailer@6'
@@ -14,6 +15,23 @@ const FROM      = `George Rental <${SMTP_USER}>`
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const supabase     = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// ── Security helpers ─────────────────────────────────────────────────────────
+// Escape anything user-supplied before it goes into email HTML.
+const esc = (v: unknown) =>
+  String(v ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!))
+
+// Who is calling? Returns their profile, or null for anonymous / invalid tokens.
+async function getCaller(req: Request): Promise<{ id: string; role: string } | null> {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (!token) return null
+  const { data } = await supabase.auth.getUser(token)
+  if (!data?.user) return null
+  const { data: profile } = await supabase
+    .from('profiles').select('id, role').eq('id', data.user.id).maybeSingle()
+  return profile
+}
+
 
 async function sendEmail(to: string, subject: string, html: string) {
   const transporter = nodemailer.createTransport({
@@ -61,6 +79,12 @@ Deno.serve(async (req) => {
     if (!payment_id || !action) {
       return new Response('missing payment_id or action', { status: 400, headers: CORS })
     }
+    if (!['submitted', 'confirmed', 'rejected'].includes(action)) {
+      return new Response('unknown action', { status: 400, headers: CORS })
+    }
+
+    const caller = await getCaller(req)
+    if (!caller) return new Response('not signed in', { status: 401, headers: CORS })
 
     // Fetch full payment details
     const { data: payment, error } = await supabase
@@ -74,13 +98,22 @@ Deno.serve(async (req) => {
       .single()
 
     if (error || !payment) {
-      return new Response('payment not found', { status: 404 })
+      return new Response('payment not found', { status: 404, headers: CORS })
+    }
+
+    const isOwner = caller.role === 'owner'
+    if (!isOwner && !(action === 'submitted' && payment.tenant_id === caller.id)) {
+      return new Response('not allowed', { status: 403, headers: CORS })
+    }
+    // Never email "confirmed"/"rejected" unless that is the payment's real status
+    if (action !== 'submitted' && payment.status !== action) {
+      return new Response('payment is not in that state', { status: 409, headers: CORS })
     }
 
     const tenantEmail = payment.tenant?.email
-    const tenantName  = payment.tenant?.full_name ?? 'Tenant'
-    const storeName   = (payment.lease?.store as any)?.name ?? 'your store'
-    const storeCode   = (payment.lease?.store as any)?.code ?? ''
+    const tenantName  = esc(payment.tenant?.full_name ?? 'Tenant')
+    const storeName   = esc((payment.lease?.store as any)?.name ?? 'your store')
+    const storeCode   = esc((payment.lease?.store as any)?.code ?? '')
     const amount      = `$${Number(payment.amount_usd).toLocaleString()}`
     const amountLrd   = `L$${Number(payment.amount_lrd ?? 0).toLocaleString()}`
     const monthsCount = payment.months_count ?? 1
@@ -107,7 +140,7 @@ Deno.serve(async (req) => {
                     ${payment.method === 'mtn_momo' ? 'MTN MoMo' : 'Bank Transfer'}
                   </td></tr>
               ${payment.transaction_ref ? `<tr><td style="padding:10px 16px;font-size:13px;color:#6B6560">Transaction Ref</td>
-                  <td style="padding:10px 16px;font-size:13px;font-family:monospace;font-weight:600;text-align:right">${payment.transaction_ref}</td></tr>` : ''}
+                  <td style="padding:10px 16px;font-size:13px;font-family:monospace;font-weight:600;text-align:right">${esc(payment.transaction_ref)}</td></tr>` : ''}
             </table>
             <a href="https://george-rental.vercel.app/owner/payments" style="${btnStyle}">Review payment →</a>
           `)
@@ -117,7 +150,7 @@ Deno.serve(async (req) => {
 
     // ── 2. Payment confirmed → notify tenant ────────────────────
     if (action === 'confirmed') {
-      if (!tenantEmail) return new Response('no tenant email', { status: 200 })
+      if (!tenantEmail) return new Response('no tenant email', { status: 200, headers: CORS })
 
       await sendEmail(
         tenantEmail,
@@ -140,7 +173,7 @@ Deno.serve(async (req) => {
             ${payment.receipt_number ? `<tr><td style="padding:10px 16px;font-size:13px;color:#6B6560">Receipt #</td>
                 <td style="padding:10px 16px;font-size:14px;font-weight:700;color:#2FB875;font-family:monospace;text-align:right">${payment.receipt_number}</td></tr>` : ''}
           </table>
-          ${payment.notes ? `<div style="background:#F9F7F3;border-radius:8px;padding:12px 16px;font-size:13px;color:#6B6560;margin-bottom:20px"><strong>Note from landlord:</strong> ${payment.notes}</div>` : ''}
+          ${payment.notes ? `<div style="background:#F9F7F3;border-radius:8px;padding:12px 16px;font-size:13px;color:#6B6560;margin-bottom:20px"><strong>Note from landlord:</strong> ${esc(payment.notes)}</div>` : ''}
           <a href="https://george-rental.vercel.app/tenant/receipts" style="${btnStyle}">View your receipts →</a>
         `)
       )
@@ -148,7 +181,7 @@ Deno.serve(async (req) => {
 
     // ── 3. Payment rejected → notify tenant ─────────────────────
     if (action === 'rejected') {
-      if (!tenantEmail) return new Response('no tenant email', { status: 200 })
+      if (!tenantEmail) return new Response('no tenant email', { status: 200, headers: CORS })
 
       await sendEmail(
         tenantEmail,
@@ -161,7 +194,7 @@ Deno.serve(async (req) => {
           </p>
           ${payment.notes ? `
           <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:16px 20px;margin-bottom:24px;font-size:14px;color:#7F1D1D">
-            <strong>Reason:</strong> ${payment.notes}
+            <strong>Reason:</strong> ${esc(payment.notes)}
           </div>` : ''}
           <p style="font-size:14px;color:#6B6560;line-height:1.6;margin:0 0 24px">
             Please resubmit with the correct proof, or contact the office on <strong>+231 88 605 5575</strong>.
@@ -176,7 +209,7 @@ Deno.serve(async (req) => {
     })
   } catch (err) {
     console.error(err)
-    return new Response(JSON.stringify({ error: String(err) }), {
+    return new Response(JSON.stringify({ error: 'failed to send' }), {
       status: 500, headers: { ...CORS, 'Content-Type': 'application/json' },
     })
   }

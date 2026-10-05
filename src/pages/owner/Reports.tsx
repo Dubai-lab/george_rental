@@ -103,6 +103,11 @@ function useReports() {
   })
 }
 
+// Tenant names etc. are typed by users — never put them into HTML unescaped.
+function escHtml(v: unknown): string {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
+}
+
 function printReport(data: ReturnType<typeof useReports>['data'], fxRate: number) {
   if (!data) return
   const { monthlyData, totalCollected, totalExpected, collectionRate, areaData, arrears, occupiedCount, totalStores } = data
@@ -182,7 +187,7 @@ function printReport(data: ReturnType<typeof useReports>['data'], fxRate: number
         const rate = m.expected > 0 ? Math.round((m.collected / m.expected) * 100) : 0
         const variance = m.collected - m.expected
         return `<tr>
-          <td>${m.label}</td>
+          <td>${escHtml(m.label)}</td>
           <td class="num">$${m.expected.toLocaleString()}</td>
           <td class="num">$${m.collected.toLocaleString()}</td>
           <td class="num" style="color:${variance >= 0 ? '#2FB875' : '#D11F2C'}">${variance >= 0 ? '+' : ''}$${variance.toLocaleString()}</td>
@@ -198,7 +203,7 @@ function printReport(data: ReturnType<typeof useReports>['data'], fxRate: number
     <thead><tr><th>Area</th><th>Stores</th><th>Monthly Revenue</th></tr></thead>
     <tbody>
       ${areaData.map(a => `<tr>
-        <td>${a.area}</td>
+        <td>${escHtml(a.area)}</td>
         <td class="num">${a.count}</td>
         <td class="num">$${a.revenue.toLocaleString()}/mo</td>
       </tr>`).join('')}
@@ -212,8 +217,8 @@ function printReport(data: ReturnType<typeof useReports>['data'], fxRate: number
     <thead><tr><th>Tenant</th><th>Store</th><th>Months Overdue</th><th>Amount Owed</th></tr></thead>
     <tbody>
       ${arrears.map(a => `<tr>
-        <td>${a.tenant}</td>
-        <td>${a.store}</td>
+        <td>${escHtml(a.tenant)}</td>
+        <td>${escHtml(a.store)}</td>
         <td class="num"><span class="badge ${a.months >= 2 ? 'badge-red' : 'badge-amber'}">${a.months} month${a.months > 1 ? 's' : ''}</span></td>
         <td class="num" style="color:#D11F2C;font-weight:700">$${a.amount.toLocaleString()}</td>
       </tr>`).join('')}
@@ -225,12 +230,16 @@ function printReport(data: ReturnType<typeof useReports>['data'], fxRate: number
     George Rental · ${today} · Confidential — for internal use only
   </div>
 
-  <script>window.onload = () => { window.print(); }</script>
 </body>
 </html>`
 
   const win = window.open('', '_blank', 'width=900,height=700')
-  if (win) { win.document.write(html); win.document.close() }
+  if (win) {
+    win.document.write(html)
+    win.document.close()
+    win.focus()
+    setTimeout(() => win.print(), 300)
+  }
 }
 
 export default function Reports() {

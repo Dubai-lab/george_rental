@@ -77,6 +77,8 @@ Deploy both functions:
 ```bash
 supabase functions deploy notify-payment
 supabase functions deploy notify-maintenance
+supabase functions deploy notify-enquiry
+supabase functions deploy notify-rent-due
 ```
 
 ### 3c. Set environment secrets
@@ -90,22 +92,11 @@ supabase secrets set SMTP_PASS=<your Gmail app password>
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set automatically.
 
-### 3d. Create database webhooks
-Go to **Supabase Dashboard → Database → Webhooks → Create a new hook**
+### 3d. No webhooks needed
 
-**Webhook 1 — Payment notifications:**
-- Name: `payment-notification`
-- Table: `public.payments`
-- Events: ✅ Insert  ✅ Update
-- Type: Supabase Edge Functions
-- Edge Function: `notify-payment`
-
-**Webhook 2 — Maintenance notifications:**
-- Name: `maintenance-notification`
-- Table: `public.maintenance_requests`
-- Events: ✅ Insert  ✅ Update
-- Type: Supabase Edge Functions
-- Edge Function: `notify-maintenance`
+The app calls the email functions itself after each action, and every function
+checks who is calling (owner / the tenant concerned). Do **not** create database
+webhooks for them.
 
 ---
 

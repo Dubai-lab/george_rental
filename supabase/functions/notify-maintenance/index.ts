@@ -1,5 +1,7 @@
 // Supabase Edge Function — notify-maintenance
-// Uses your custom SpaceMail SMTP (no third-party service needed)
+// Called from the app (not a webhook): { request_id, event }
+//   event 'created'        — sent by the tenant who filed it → emails the owner
+//   event 'status_changed' — sent by the owner               → emails the tenant
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import nodemailer from 'npm:nodemailer@6'
@@ -15,6 +17,23 @@ const SUPABASE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
+// ── Security helpers ─────────────────────────────────────────────────────────
+// Escape anything user-supplied before it goes into email HTML.
+const esc = (v: unknown) =>
+  String(v ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!))
+
+// Who is calling? Returns their profile, or null for anonymous / invalid tokens.
+async function getCaller(req: Request): Promise<{ id: string; role: string } | null> {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (!token) return null
+  const { data } = await supabase.auth.getUser(token)
+  if (!data?.user) return null
+  const { data: profile } = await supabase
+    .from('profiles').select('id, role').eq('id', data.user.id).maybeSingle()
+  return profile
+}
+
+
 async function sendEmail(to: string, subject: string, html: string) {
   const transporter = nodemailer.createTransport({
     host: SMTP_HOST, port: SMTP_PORT, secure: SMTP_PORT === 465,
@@ -28,14 +47,25 @@ function priorityBadge(p: string) {
   return `<span style="display:inline-block;padding:2px 10px;border-radius:99px;background:${color}22;color:${color};font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">${p} priority</span>`
 }
 
-Deno.serve(async (req) => {
-  try {
-    const payload   = await req.json()
-    const record    = payload.record
-    const old       = payload.old_record
-    const eventType = payload.type // INSERT or UPDATE
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
-    if (!record) return new Response('no record', { status: 200 })
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS })
+  }
+
+  try {
+    const text = await req.text()
+    const { request_id, event } = text?.trim() ? JSON.parse(text) : {}
+    if (!request_id || !['created', 'status_changed'].includes(event)) {
+      return new Response('missing request_id or event', { status: 400, headers: CORS })
+    }
+
+    const caller = await getCaller(req)
+    if (!caller) return new Response('not signed in', { status: 401, headers: CORS })
 
     // Fetch full data
     const { data: req_ } = await supabase
@@ -45,18 +75,29 @@ Deno.serve(async (req) => {
         tenant:profiles!maintenance_requests_tenant_id_fkey(full_name, email),
         store:stores(code, name)
       `)
-      .eq('id', record.id)
+      .eq('id', request_id)
       .single()
 
-    if (!req_) return new Response('request not found', { status: 404 })
+    if (!req_) return new Response('request not found', { status: 404, headers: CORS })
+
+    const isOwner = caller.role === 'owner'
+    if (event === 'created' && !isOwner && req_.tenant_id !== caller.id) {
+      return new Response('not allowed', { status: 403, headers: CORS })
+    }
+    if (event === 'status_changed' && !isOwner) {
+      return new Response('not allowed', { status: 403, headers: CORS })
+    }
+
+    const title       = esc(req_.title)
+    const description = req_.description ? esc(req_.description) : ''
 
     const tenantEmail = req_.tenant?.email
-    const tenantName  = req_.tenant?.full_name ?? 'Tenant'
-    const storeName   = req_.store?.name ?? 'your store'
-    const storeCode   = req_.store?.code ?? ''
+    const tenantName  = esc(req_.tenant?.full_name ?? 'Tenant')
+    const storeName   = esc(req_.store?.name ?? 'your store')
+    const storeCode   = esc(req_.store?.code ?? '')
 
     // ── NEW request inserted → email owner ────────────────────
-    if (eventType === 'INSERT') {
+    if (event === 'created') {
       const { data: owner } = await supabase
         .from('profiles')
         .select('email')
@@ -67,15 +108,15 @@ Deno.serve(async (req) => {
       if (owner?.email) {
         await sendEmail(
           owner.email,
-          `🔧 New maintenance request — ${req_.title} | George Rental`,
+          `🔧 New maintenance request — ${title} | George Rental`,
           emailWrapper(`
             <h2 style="margin:0 0 6px">New Maintenance Request 🔧</h2>
             <p style="color:#6B6560;font-size:14px;margin:0 0 20px">
               From <strong>${tenantName}</strong> at <strong>${storeName} (${storeCode})</strong>
             </p>
             <div style="background:#F9F7F3;border-left:4px solid #D11F2C;border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:20px">
-              <div style="font-size:16px;font-weight:700;color:#060914;margin-bottom:8px">${req_.title}</div>
-              ${req_.description ? `<div style="font-size:14px;color:#6B6560;line-height:1.6">${req_.description}</div>` : ''}
+              <div style="font-size:16px;font-weight:700;color:#060914;margin-bottom:8px">${title}</div>
+              ${description ? `<div style="font-size:14px;color:#6B6560;line-height:1.6">${description}</div>` : ''}
               <div style="margin-top:12px">${priorityBadge(req_.priority)}</div>
             </div>
             <a href="https://george-rental.vercel.app/owner/maintenance" style="${btnStyle}">View maintenance →</a>
@@ -85,10 +126,10 @@ Deno.serve(async (req) => {
     }
 
     // ── Status updated → email tenant ─────────────────────────
-    if (eventType === 'UPDATE' && record.status !== old?.status) {
-      if (!tenantEmail) return new Response('no tenant email', { status: 200 })
+    if (event === 'status_changed' && req_.status !== 'open') {
+      if (!tenantEmail) return new Response('no tenant email', { status: 200, headers: CORS })
 
-      const isResolved  = record.status === 'resolved'
+      const isResolved  = req_.status === 'resolved'
       const statusLabel = isResolved ? 'Resolved ✅' : 'In Progress 🛠️'
       const statusColor = isResolved ? '#2FB875' : '#E9B949'
       const statusMsg   = isResolved
@@ -97,7 +138,7 @@ Deno.serve(async (req) => {
 
       await sendEmail(
         tenantEmail,
-        `${isResolved ? '✅' : '🛠️'} Maintenance update — ${req_.title} | George Rental`,
+        `${isResolved ? '✅' : '🛠️'} Maintenance update — ${title} | George Rental`,
         emailWrapper(`
           <h2 style="margin:0 0 10px">Maintenance Update</h2>
           <div style="display:inline-block;padding:4px 14px;border-radius:99px;background:${statusColor}22;color:${statusColor};font-size:13px;font-weight:600;margin-bottom:20px">
@@ -107,7 +148,7 @@ Deno.serve(async (req) => {
             Hi <strong>${tenantName}</strong>, ${statusMsg}
           </p>
           <div style="background:#F9F7F3;border-radius:10px;padding:16px 20px;margin-bottom:24px">
-            <div style="font-size:14px;font-weight:700;color:#060914;margin-bottom:4px">${req_.title}</div>
+            <div style="font-size:14px;font-weight:700;color:#060914;margin-bottom:4px">${title}</div>
             <div style="font-size:12px;color:#6B6560">${storeName} (${storeCode})</div>
           </div>
           <a href="https://george-rental.vercel.app/tenant/maintenance" style="${btnStyle}">View requests →</a>
@@ -117,11 +158,11 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...CORS, 'Content-Type': 'application/json' },
     })
   } catch (err) {
     console.error(err)
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500 })
+    return new Response(JSON.stringify({ error: 'failed to send' }), { status: 500, headers: CORS })
   }
 })
 

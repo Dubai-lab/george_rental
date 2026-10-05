@@ -48,7 +48,8 @@ export default function AppSidebar({ storeBadge, tenantBadge, maintenanceBadge, 
 
   async function handleSignOut() {
     await signOut()
-    navigate('/', { replace: true })
+    // Full reload: lands on the home page and wipes any data cached in memory
+    window.location.assign('/')
   }
 
   async function saveRate() {

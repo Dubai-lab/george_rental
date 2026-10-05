@@ -9,6 +9,8 @@ import { Lease, Store, Payment, StoreEnquiry } from '@/types'
 import Pill from '@/components/ui/Pill'
 import Btn from '@/components/ui/Btn'
 import Avatar from '@/components/ui/Avatar'
+import { useWindowWidth } from '@/hooks/useWindowWidth'
+import { TENANT_DESKTOP_MIN } from '@/components/layout/TenantLayout'
 import { IconCash, IconFile, IconWrench, IconClock, IconCheck, IconAlert } from '@/components/ui/Icons'
 
 type TenantLease = Lease & { store: Store }
@@ -77,10 +79,14 @@ export default function TenantHome() {
 
   const due = lease ? dueStatus(lease, recentPayments) : null
 
+  // Desktop: hero on top, then two columns (activity left, shortcuts right)
+  const isDesktop = useWindowWidth() >= TENANT_DESKTOP_MIN
+  const sectionPad = isDesktop ? '0' : '20px 20px 0'
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, paddingBottom: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, paddingBottom: isDesktop ? 0 : 24 }}>
       {/* Greeting header */}
-      <div style={{ background: 'var(--gr-midnight)', padding: '28px 20px 32px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--gr-midnight)', padding: isDesktop ? '32px 36px 36px' : '28px 20px 32px', borderRadius: isDesktop ? 20 : 0, position: 'relative', overflow: 'hidden' }}>
         <div className="gr-grid-bg" style={{ position: 'absolute', inset: 0, opacity: 0.3 }} />
         <div style={{ position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
@@ -143,9 +149,13 @@ export default function TenantHome() {
         </div>
       </div>
 
+      <div style={isDesktop
+        ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1.7fr) minmax(0, 1fr)', gap: '28px 32px', alignItems: 'start', marginTop: 28 }
+        : undefined}>
+
       {/* Store requests — shown to anyone who has sent one, and to anyone without a store */}
       {!isLoading && (requests.length > 0 || !lease) && (
-        <div style={{ padding: '20px 20px 0' }}>
+        <div style={{ padding: sectionPad, gridColumn: isDesktop ? 1 : undefined }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gr-stone-2)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>My Store Requests</div>
             <button type="button" onClick={() => navigate('/stores')} style={{ fontSize: 12, color: 'var(--gr-crimson)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -192,7 +202,7 @@ export default function TenantHome() {
       )}
 
       {/* Quick actions */}
-      <div style={{ padding: '20px 20px 0' }}>
+      <div style={{ padding: sectionPad, gridColumn: isDesktop ? 2 : undefined, gridRow: isDesktop ? '1 / span 2' : undefined }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gr-stone-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Quick Actions</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
           {[
@@ -218,7 +228,7 @@ export default function TenantHome() {
       </div>
 
       {/* Recent payments */}
-      <div style={{ padding: '24px 20px 0' }}>
+      <div style={{ padding: isDesktop ? '0' : '24px 20px 0', gridColumn: isDesktop ? 1 : undefined }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gr-stone-2)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Recent Payments</div>
           <button onClick={() => navigate('/tenant/receipts')} style={{ fontSize: 12, color: 'var(--gr-crimson)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -266,6 +276,8 @@ export default function TenantHome() {
             ))}
           </div>
         )}
+      </div>
+
       </div>
     </div>
   )
